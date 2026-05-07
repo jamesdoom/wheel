@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { WheelItem, WheelMode } from "../../types";
 import "./WheelCanvas.css";
 import ResultModal from "./ResultModal";
@@ -19,19 +19,12 @@ function WheelCanvas({
   isMuted,
 }: WheelCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const spinAudioRef = useRef<HTMLAudioElement | null>(null);
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
-  const [rotation, setRotation] = useState(0);
+  const tickAudioRef = useRef<HTMLAudioElement | null>(null);
+  const rotationRef = useRef(0);
+  const animationFrameRef = useRef<number | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const [result, setResult] = useState<WheelItem | null>(null);
-
-  // Load spin sound once
-  useEffect(() => {
-    const audio = new Audio("/sounds/spin.mp3");
-    audio.preload = "auto";
-    audio.volume = 0.45;
-    spinAudioRef.current = audio;
-  }, []);
 
   useEffect(() => {
     const audio = new Audio("/sounds/win.mp3");
@@ -40,90 +33,105 @@ function WheelCanvas({
     winAudioRef.current = audio;
   }, []);
 
+  useEffect(() => {
+    const audio = new Audio("/sounds/tick.wav");
+    audio.preload = "auto";
+    audio.volume = 0.35;
+
+    tickAudioRef.current = audio;
+  }, []);
+
   const visibleItems = items.filter((item) => !item.hidden);
   const canSpin = visibleItems.length > 1;
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const drawWheel = useCallback(
+    (rotationValue: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    const size = canvas.width;
-    const center = size / 2;
-    const radius = center - 10;
+      const size = canvas.width;
+      const center = size / 2;
+      const radius = center - 10;
 
-    const visibleItems = items.filter((item) => !item.hidden);
+      const visibleItems = items.filter((item) => !item.hidden);
 
-    if (visibleItems.length === 0) {
+      if (visibleItems.length === 0) {
+        ctx.clearRect(0, 0, size, size);
+
+        ctx.beginPath();
+        ctx.arc(center, center, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = "#111827";
+        ctx.lineWidth = 8;
+        ctx.stroke();
+
+        return;
+      }
+
+      const sliceAngle = (Math.PI * 2) / visibleItems.length;
+
       ctx.clearRect(0, 0, size, size);
 
+      ctx.save();
+      ctx.translate(center, center);
+      ctx.rotate(rotationValue);
+      ctx.translate(-center, -center);
+
+      visibleItems.forEach((item, index) => {
+        const startAngle = index * sliceAngle;
+        const endAngle = startAngle + sliceAngle;
+        const textAngle = startAngle + sliceAngle / 2;
+
+        // Draw slice
+        ctx.beginPath();
+        ctx.moveTo(center, center);
+        ctx.arc(center, center, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = item.color;
+        ctx.fill();
+
+        // Draw border
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Draw text
+        ctx.save();
+        ctx.translate(center, center);
+        ctx.rotate(textAngle);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#111827";
+        ctx.font = "bold 16px Arial";
+        ctx.fillText(item.text, radius - 24, 6);
+        ctx.restore();
+      });
+
+      ctx.restore();
+
+      // Outer ring
       ctx.beginPath();
       ctx.arc(center, center, radius, 0, Math.PI * 2);
       ctx.strokeStyle = "#111827";
       ctx.lineWidth = 8;
       ctx.stroke();
 
-      return;
-    }
-
-    const sliceAngle = (Math.PI * 2) / visibleItems.length;
-
-    ctx.clearRect(0, 0, size, size);
-
-    ctx.save();
-    ctx.translate(center, center);
-    ctx.rotate(rotation);
-    ctx.translate(-center, -center);
-
-    visibleItems.forEach((item, index) => {
-      const startAngle = index * sliceAngle;
-      const endAngle = startAngle + sliceAngle;
-      const textAngle = startAngle + sliceAngle / 2;
-
-      // Draw slice
+      // Pointer
       ctx.beginPath();
-      ctx.moveTo(center, center);
-      ctx.arc(center, center, radius, startAngle, endAngle);
+      ctx.moveTo(center + radius + 4, center);
+      ctx.lineTo(center + radius + 28, center - 14);
+      ctx.lineTo(center + radius + 28, center + 14);
       ctx.closePath();
-      ctx.fillStyle = item.color;
-      ctx.fill();
-
-      // Draw border
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Draw text
-      ctx.save();
-      ctx.translate(center, center);
-      ctx.rotate(textAngle);
-      ctx.textAlign = "right";
       ctx.fillStyle = "#111827";
-      ctx.font = "bold 16px Arial";
-      ctx.fillText(item.text, radius - 24, 6);
-      ctx.restore();
-    });
+      ctx.fill();
+    },
+    [items],
+  );
 
-    ctx.restore();
-
-    // Outer ring
-    ctx.beginPath();
-    ctx.arc(center, center, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = "#111827";
-    ctx.lineWidth = 8;
-    ctx.stroke();
-
-    // Pointer
-    ctx.beginPath();
-    ctx.moveTo(center + radius + 4, center);
-    ctx.lineTo(center + radius + 28, center - 14);
-    ctx.lineTo(center + radius + 28, center + 14);
-    ctx.closePath();
-    ctx.fillStyle = "#111827";
-    ctx.fill();
-  }, [items, rotation]);
+  useEffect(() => {
+    drawWheel(rotationRef.current);
+  }, [drawWheel]);
 
   function pickWeightedWinner(items: WheelItem[]): WheelItem | null {
     const weightedItems = items.filter((item) => item.weight > 0);
@@ -143,6 +151,10 @@ function WheelCanvas({
     return weightedItems[weightedItems.length - 1];
   }
 
+  function easeOutCubic(progress: number) {
+    return 1 - Math.pow(1 - progress, 3);
+  }
+
   function handleSpin() {
     if (isSpinning || !canSpin) return;
 
@@ -156,6 +168,7 @@ function WheelCanvas({
 
     const selected = pickWeightedWinner(visibleItems);
     if (!selected) {
+      animationFrameRef.current = null;
       setIsSpinning(false);
       return;
     }
@@ -174,40 +187,54 @@ function WheelCanvas({
     const targetAngle = winnerIndex * sliceAngle + sliceAngle / 2;
     const targetRotation = (fullCircle - targetAngle) % fullCircle;
 
-    const currentRotation = ((rotation % fullCircle) + fullCircle) % fullCircle;
+    const currentRotation =
+      ((rotationRef.current % fullCircle) + fullCircle) % fullCircle;
     const rotationDelta =
       (targetRotation - currentRotation + fullCircle) % fullCircle;
 
-    const extraSpins = fullCircle * 5;
-    const finalRotation = rotation + extraSpins + rotationDelta;
+    const extraSpins = fullCircle * 6;
+    const finalRotation = rotationRef.current + extraSpins + rotationDelta;
 
-    const duration = 2400; // match your audio length
+    const duration = 3200;
     const startTime = performance.now();
-    const startRotation = rotation;
+    const startRotation = rotationRef.current;
 
-    // 🔊 Play sound
-    const audio = spinAudioRef.current;
-    if (audio && !isMuted) {
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
-    }
+    let lastTickTime = 0;
 
     function animate(now: number) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
 
-      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      const easedProgress = easeOutCubic(progress);
+      const tickInterval = 20 + progress * 140;
 
       const animatedRotation =
         startRotation + (finalRotation - startRotation) * easedProgress;
 
-      setRotation(animatedRotation);
+      if (now - lastTickTime > tickInterval) {
+        if (!isMuted) {
+          const tickAudio = tickAudioRef.current?.cloneNode() as
+            | HTMLAudioElement
+            | undefined;
+
+          if (tickAudio) {
+            tickAudio.volume = 0.6;
+            tickAudio.play().catch(() => {});
+          }
+        }
+
+        lastTickTime = now;
+      }
+
+      rotationRef.current = animatedRotation;
+      drawWheel(animatedRotation);
 
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        animationFrameRef.current = requestAnimationFrame(animate);
       } else {
         const final = finalRotation % fullCircle;
-        setRotation(final);
+        rotationRef.current = final;
+        drawWheel(final);
 
         setTimeout(() => {
           setResult(winningItem);
@@ -241,19 +268,19 @@ function WheelCanvas({
       }
     }
 
-    requestAnimationFrame(animate);
+    animationFrameRef.current = requestAnimationFrame(animate);
   }
 
   function handleReset() {
-    const audio = spinAudioRef.current;
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
     }
 
     setItems(createDefaultItems());
     setResult(null);
-    setRotation(0);
+    rotationRef.current = 0;
+    drawWheel(0);
   }
 
   function handleResetCount() {
