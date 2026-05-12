@@ -9,6 +9,7 @@ type WheelCanvasProps = {
   mode: WheelMode;
   createDefaultItems: () => WheelItem[];
   isMuted: boolean;
+  theme: "light" | "dark";
 };
 
 function WheelCanvas({
@@ -17,6 +18,7 @@ function WheelCanvas({
   mode,
   createDefaultItems,
   isMuted,
+  theme,
 }: WheelCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -55,6 +57,7 @@ function WheelCanvas({
       const size = canvas.width;
       const center = size / 2;
       const radius = center - 10;
+      const frameColor = theme === "dark" ? "#f9fafb" : "#111827";
 
       const visibleItems = items.filter((item) => !item.hidden);
 
@@ -113,7 +116,7 @@ function WheelCanvas({
       // Outer ring
       ctx.beginPath();
       ctx.arc(center, center, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = "#111827";
+      ctx.strokeStyle = frameColor;
       ctx.lineWidth = 8;
       ctx.stroke();
 
@@ -123,10 +126,10 @@ function WheelCanvas({
       ctx.lineTo(center + radius + 28, center - 14);
       ctx.lineTo(center + radius + 28, center + 14);
       ctx.closePath();
-      ctx.fillStyle = "#111827";
+      ctx.fillStyle = frameColor;
       ctx.fill();
     },
-    [items],
+    [items, theme],
   );
 
   useEffect(() => {
@@ -238,13 +241,13 @@ function WheelCanvas({
 
         setTimeout(() => {
           setResult(winningItem);
-        }, 120);
 
-        const winAudio = winAudioRef.current;
-        if (winAudio && !isMuted) {
-          winAudio.currentTime = 0;
-          winAudio.play().catch(() => {});
-        }
+          const winAudio = winAudioRef.current;
+          if (winAudio && !isMuted) {
+            winAudio.currentTime = 0;
+            winAudio.play().catch(() => {});
+          }
+        }, 120);
 
         if (mode === "elimination") {
           setItems((prev) =>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { WheelItem, WheelMode } from "./types";
 import WheelCanvas from "./components/Wheel/WheelCanvas";
 import "./App.css";
@@ -13,6 +13,11 @@ const COLORS = [
   { color: "#a78bfa", className: "color-purple" },
   { color: "#f472b6", className: "color-pink" },
 ];
+
+const ITEMS_STORAGE_KEY = "wheel-items";
+const MODE_STORAGE_KEY = "wheel-mode";
+const MUTED_STORAGE_KEY = "wheel-muted";
+const THEME_STORAGE_KEY = "wheel-theme";
 
 function getNextColor(index: number) {
   return COLORS[index % COLORS.length];
@@ -69,11 +74,61 @@ function createDefaultItems(): WheelItem[] {
 }
 
 function App() {
-  const [items, setItems] = useState<WheelItem[]>(() => createDefaultItems());
-  const [mode, setMode] = useState<WheelMode>("normal");
+  const [items, setItems] = useState<WheelItem[]>(() => {
+    const savedItems = localStorage.getItem(ITEMS_STORAGE_KEY);
+
+    if (!savedItems) {
+      return createDefaultItems();
+    }
+
+    try {
+      return JSON.parse(savedItems) as WheelItem[];
+    } catch {
+      return createDefaultItems();
+    }
+  });
+  const [mode, setMode] = useState<WheelMode>(() => {
+    const savedMode = localStorage.getItem(MODE_STORAGE_KEY);
+
+    if (
+      savedMode === "normal" ||
+      savedMode === "elimination" ||
+      savedMode === "accumulation"
+    ) {
+      return savedMode;
+    }
+
+    return "normal";
+  });
   const [newItemText, setNewItemText] = useState("");
-  const [isMuted, setIsMuted] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [isMuted, setIsMuted] = useState(() => {
+    return localStorage.getItem(MUTED_STORAGE_KEY) === "true";
+  });
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+
+    if (savedTheme === "light" || savedTheme === "dark") {
+      return savedTheme;
+    }
+
+    return "light";
+  });
+
+  useEffect(() => {
+    localStorage.setItem(ITEMS_STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
+
+  useEffect(() => {
+    localStorage.setItem(MODE_STORAGE_KEY, mode);
+  }, [mode]);
+
+  useEffect(() => {
+    localStorage.setItem(MUTED_STORAGE_KEY, String(isMuted));
+  }, [isMuted]);
+
+  useEffect(() => {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
 
   function handleAddItem() {
     const trimmedText = newItemText.trim();
@@ -143,6 +198,7 @@ function App() {
         mode={mode}
         createDefaultItems={createDefaultItems}
         isMuted={isMuted}
+        theme={theme}
       />
 
       {/* Add Item */}
@@ -231,6 +287,13 @@ function App() {
           </div>
         ))}
       </section>
+
+      <button
+        className="reset-saved-wheel-button"
+        onClick={handleResetSavedWheel}
+      >
+        Reset Saved Wheel
+      </button>
       <footer className="app-footer">
         <p>© {new Date().getFullYear()} The Wheel</p>
 
@@ -255,6 +318,18 @@ function App() {
       </footer>
     </main>
   );
+
+  function handleResetSavedWheel() {
+    const shouldReset = window.confirm(
+      "Reset the wheel back to the default items? This will remove your saved custom wheel.",
+    );
+
+    if (!shouldReset) return;
+
+    setItems(createDefaultItems());
+    setMode("normal");
+    setNewItemText("");
+  }
 }
 
 export default App;

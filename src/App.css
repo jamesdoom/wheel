@@ -116,6 +116,15 @@
   border-color: #2563eb;
 }
 
+.dark-theme .add-item-button {
+  background: #f9fafb;
+  color: #111827;
+}
+
+.dark-theme .add-item-button:hover {
+  background: #e5e7eb;
+}
+
 .delete-item-button {
   border: none;
   background: transparent;
@@ -238,4 +247,25 @@
 
 .dark-theme input::placeholder {
   color: #9ca3af;
+}
+
+.reset-saved-wheel-button {
+  display: block;
+  margin: 1rem auto 1.5rem;
+  padding: 0.55rem 1rem;
+  border: none;
+  border-radius: 999px;
+  background: #ef4444;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reset-saved-wheel-button:hover {
+  background: #dc2626;
+}
+
+.reset-saved-wheel-button:focus-visible {
+  outline: 3px solid #fecaca;
+  outline-offset: 3px;
 }

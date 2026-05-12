@@ -21,11 +21,37 @@
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
+  transition:
+    transform 120ms ease,
+    background 120ms ease,
+    opacity 120ms ease;
+}
+
+.spin-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #1f2937;
+}
+
+.spin-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.spin-button:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 3px;
 }
 
 .spin-button:disabled {
   cursor: not-allowed;
   opacity: 0.65;
+}
+.dark-theme .spin-button {
+  background: #f9fafb;
+  color: #111827;
+}
+
+.dark-theme .spin-button:hover:not(:disabled) {
+  background: #e5e7eb;
 }
 
 .result-display {
