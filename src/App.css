@@ -1,7 +1,12 @@
+* {
+  box-sizing: border-box;
+}
+
 .app {
   min-height: 100vh;
   padding: 2rem;
   font-family: Arial, sans-serif;
+  overflow-x: hidden;
   transition:
     background 0.2s ease,
     color 0.2s ease;
@@ -23,6 +28,7 @@
 }
 
 .item-list {
+  width: 100%;
   max-width: 500px;
   margin: 0 auto;
   padding: 1.5rem;
@@ -94,6 +100,7 @@
 }
 
 .mode-panel {
+  width: 100%;
   max-width: 500px;
   margin: 0 auto 2rem;
   display: flex;
@@ -140,6 +147,7 @@
 }
 
 .add-item-panel {
+  width: 100%;
   max-width: 500px;
   margin: 0 auto 1rem;
   display: flex;
@@ -268,4 +276,80 @@
 .reset-saved-wheel-button:focus-visible {
   outline: 3px solid #fecaca;
   outline-offset: 3px;
+}
+
+@media (max-width: 520px) {
+  .controls-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mute-button,
+  .theme-button {
+    width: auto;
+    min-width: 180px;
+    align-self: center;
+  }
+
+  .item-row {
+    display: grid;
+    grid-template-columns: 16px 1fr auto;
+    gap: 0.65rem 0.75rem;
+    align-items: center;
+    padding: 1rem 0;
+  }
+
+  .color-dot {
+    grid-column: 1;
+  }
+
+  .item-text-input {
+    grid-column: 2 / 4;
+    width: 100%;
+  }
+
+  .weight-input-label {
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: auto;
+  }
+
+  .weight-input {
+    width: 72px;
+    margin-top: 0;
+  }
+
+  .delete-item-button {
+    grid-column: 3;
+    grid-row: 2;
+    margin-left: 0;
+    align-self: center;
+  }
+
+  .add-item-panel {
+    flex-direction: column;
+  }
+
+  .add-item-button {
+    width: auto;
+    align-self: center;
+  }
+
+  .app {
+    padding: 1rem;
+  }
+
+  .item-list {
+    padding: 1rem;
+  }
+
+  .spin-button,
+  .add-item-button,
+  .mute-button,
+  .theme-button,
+  .reset-saved-wheel-button {
+    min-height: 48px;
+  }
 }

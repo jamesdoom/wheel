@@ -6,8 +6,9 @@
 }
 
 .wheel-canvas {
-  width: 420px;
-  height: 420px;
+  width: min(420px, 92vw);
+  height: auto;
+  aspect-ratio: 1 / 1;
   filter: drop-shadow(0 12px 24px rgba(15, 23, 42, 0.18));
 }
 
