@@ -1,3 +1,4 @@
+// src\components\Wheel\WheelCanvas.tsx
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { WheelItem, WheelMode } from "../../types";
 import "./WheelCanvas.css";
@@ -11,6 +12,47 @@ type WheelCanvasProps = {
   isMuted: boolean;
   theme: "light" | "dark";
 };
+
+const FULL_CIRCLE = Math.PI * 2;
+
+type WheelSegment = {
+  item: WheelItem;
+  startAngle: number;
+  endAngle: number;
+};
+
+function getSelectableItems(items: WheelItem[]) {
+  return items.filter(
+    (item) => !item.hidden && Number.isFinite(item.weight) && item.weight > 0,
+  );
+}
+
+function getWeightedSegments(items: WheelItem[]): WheelSegment[] {
+  const selectableItems = getSelectableItems(items);
+  const totalWeight = selectableItems.reduce(
+    (sum, item) => sum + item.weight,
+    0,
+  );
+
+  if (totalWeight <= 0) {
+    return [];
+  }
+
+  let currentAngle = 0;
+
+  return selectableItems.map((item) => {
+    const sliceAngle = (item.weight / totalWeight) * FULL_CIRCLE;
+    const segment = {
+      item,
+      startAngle: currentAngle,
+      endAngle: currentAngle + sliceAngle,
+    };
+
+    currentAngle += sliceAngle;
+
+    return segment;
+  });
+}
 
 function WheelCanvas({
   items,
@@ -44,7 +86,10 @@ function WheelCanvas({
   }, []);
 
   const visibleItems = items.filter((item) => !item.hidden);
-  const canSpin = visibleItems.length > 1;
+
+  const selectableItems = getSelectableItems(items);
+
+  const canSpin = selectableItems.length > 1;
 
   const drawWheel = useCallback(
     (rotationValue: number) => {
@@ -59,21 +104,19 @@ function WheelCanvas({
       const radius = center - 10;
       const frameColor = theme === "dark" ? "#f9fafb" : "#111827";
 
-      const visibleItems = items.filter((item) => !item.hidden);
+      const weightedSegments = getWeightedSegments(items);
 
-      if (visibleItems.length === 0) {
+      if (weightedSegments.length === 0) {
         ctx.clearRect(0, 0, size, size);
 
         ctx.beginPath();
         ctx.arc(center, center, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = "#111827";
+        ctx.strokeStyle = frameColor;
         ctx.lineWidth = 8;
         ctx.stroke();
 
         return;
       }
-
-      const sliceAngle = (Math.PI * 2) / visibleItems.length;
 
       ctx.clearRect(0, 0, size, size);
 
@@ -82,10 +125,8 @@ function WheelCanvas({
       ctx.rotate(rotationValue);
       ctx.translate(-center, -center);
 
-      visibleItems.forEach((item, index) => {
-        const startAngle = index * sliceAngle;
-        const endAngle = startAngle + sliceAngle;
-        const textAngle = startAngle + sliceAngle / 2;
+      weightedSegments.forEach(({ item, startAngle, endAngle }) => {
+        const textAngle = startAngle + (endAngle - startAngle) / 2;
 
         // Draw slice
         ctx.beginPath();
@@ -161,15 +202,12 @@ function WheelCanvas({
   function handleSpin() {
     if (isSpinning || !canSpin) return;
 
-    const visibleItems = items.filter((item) => !item.hidden);
-    if (visibleItems.length === 0) return;
+    const weightedSegments = getWeightedSegments(items);
+    if (weightedSegments.length < 2) return;
 
     setIsSpinning(true);
 
-    const fullCircle = Math.PI * 2;
-    const sliceAngle = fullCircle / visibleItems.length;
-
-    const selected = pickWeightedWinner(visibleItems);
+    const selected = pickWeightedWinner(weightedSegments.map(({ item }) => item));
     if (!selected) {
       animationFrameRef.current = null;
       setIsSpinning(false);
@@ -178,24 +216,26 @@ function WheelCanvas({
 
     const winningItem = selected;
 
-    const winnerIndex = visibleItems.findIndex(
-      (item) => item.id === winningItem.id,
+    const winningSegment = weightedSegments.find(
+      ({ item }) => item.id === winningItem.id,
     );
 
-    if (winnerIndex === -1) {
+    if (!winningSegment) {
       setIsSpinning(false);
       return;
     }
 
-    const targetAngle = winnerIndex * sliceAngle + sliceAngle / 2;
-    const targetRotation = (fullCircle - targetAngle) % fullCircle;
+    const targetAngle =
+      winningSegment.startAngle +
+      (winningSegment.endAngle - winningSegment.startAngle) / 2;
+    const targetRotation = (FULL_CIRCLE - targetAngle) % FULL_CIRCLE;
 
     const currentRotation =
-      ((rotationRef.current % fullCircle) + fullCircle) % fullCircle;
+      ((rotationRef.current % FULL_CIRCLE) + FULL_CIRCLE) % FULL_CIRCLE;
     const rotationDelta =
-      (targetRotation - currentRotation + fullCircle) % fullCircle;
+      (targetRotation - currentRotation + FULL_CIRCLE) % FULL_CIRCLE;
 
-    const extraSpins = fullCircle * 6;
+    const extraSpins = FULL_CIRCLE * 6;
     const finalRotation = rotationRef.current + extraSpins + rotationDelta;
 
     const duration = 3200;
@@ -235,7 +275,7 @@ function WheelCanvas({
       if (progress < 1) {
         animationFrameRef.current = requestAnimationFrame(animate);
       } else {
-        const final = finalRotation % fullCircle;
+        const final = finalRotation % FULL_CIRCLE;
         rotationRef.current = final;
         drawWheel(final);
 
@@ -306,17 +346,17 @@ function WheelCanvas({
         height={420}
       />
 
-      {canSpin ? (
+      {visibleItems.length <= 1 ? (
+        <button className="spin-button reset-button" onClick={handleReset}>
+          Reset Wheel
+        </button>
+      ) : (
         <button
           className="spin-button"
           onClick={handleSpin}
-          disabled={isSpinning}
+          disabled={isSpinning || !canSpin}
         >
           {isSpinning ? "Spinning..." : "Spin"}
-        </button>
-      ) : (
-        <button className="spin-button reset-button" onClick={handleReset}>
-          Reset Wheel
         </button>
       )}
 
@@ -328,11 +368,16 @@ function WheelCanvas({
           Reset Count
         </button>
       )}
-
       {visibleItems.length === 1 && (
         <p className="wheel-status">
           Only <strong>{visibleItems[0].text}</strong> is left. Reset the wheel
           to spin again.
+        </p>
+      )}
+
+      {visibleItems.length > 1 && !canSpin && (
+        <p className="wheel-status">
+          At least two visible items must have a weight greater than 0 to spin.
         </p>
       )}
 

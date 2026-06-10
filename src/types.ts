@@ -1,3 +1,4 @@
+// src\types.ts
 export type WheelMode = "normal" | "elimination" | "accumulation";
 
 export type WheelItem = {

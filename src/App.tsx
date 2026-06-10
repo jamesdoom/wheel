@@ -32,6 +32,16 @@ function getLeastUsedColor(items: WheelItem[]) {
   return colorCounts.sort((a, b) => a.count - b.count)[0];
 }
 
+function normalizeWholeNumber(value: unknown) {
+  const parsedValue = Number(value);
+
+  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+    return 0;
+  }
+
+  return Math.floor(parsedValue);
+}
+
 function createDefaultItems(): WheelItem[] {
   return [
     {
@@ -73,6 +83,53 @@ function createDefaultItems(): WheelItem[] {
   ];
 }
 
+function createStoredItem(rawItem: unknown, index: number): WheelItem | null {
+  if (!rawItem || typeof rawItem !== "object") {
+    return null;
+  }
+
+  const item = rawItem as Partial<WheelItem>;
+  const fallbackColor = getNextColor(index);
+  const matchingColor =
+    COLORS.find((colorOption) => colorOption.color === item.color) ??
+    COLORS.find((colorOption) => colorOption.className === item.colorClass) ??
+    fallbackColor;
+
+  return {
+    id:
+      typeof item.id === "string" && item.id.trim()
+        ? item.id
+        : crypto.randomUUID(),
+    text:
+      typeof item.text === "string" && item.text.trim()
+        ? item.text
+        : `Item ${index + 1}`,
+    weight: normalizeWholeNumber(item.weight),
+    color: matchingColor.color,
+    colorClass: matchingColor.className,
+    hidden: Boolean(item.hidden),
+    count: normalizeWholeNumber(item.count),
+  };
+}
+
+function parseStoredItems(savedItems: string): WheelItem[] {
+  try {
+    const parsedItems = JSON.parse(savedItems);
+
+    if (!Array.isArray(parsedItems)) {
+      return createDefaultItems();
+    }
+
+    const normalizedItems = parsedItems
+      .map((item, index) => createStoredItem(item, index))
+      .filter((item): item is WheelItem => item !== null);
+
+    return normalizedItems.length > 0 ? normalizedItems : createDefaultItems();
+  } catch {
+    return createDefaultItems();
+  }
+}
+
 function App() {
   const [items, setItems] = useState<WheelItem[]>(() => {
     const savedItems = localStorage.getItem(ITEMS_STORAGE_KEY);
@@ -81,12 +138,9 @@ function App() {
       return createDefaultItems();
     }
 
-    try {
-      return JSON.parse(savedItems) as WheelItem[];
-    } catch {
-      return createDefaultItems();
-    }
+    return parseStoredItems(savedItems);
   });
+
   const [mode, setMode] = useState<WheelMode>(() => {
     const savedMode = localStorage.getItem(MODE_STORAGE_KEY);
 
@@ -100,10 +154,15 @@ function App() {
 
     return "normal";
   });
+
   const [newItemText, setNewItemText] = useState("");
+  const [addItemError, setAddItemError] = useState("");
+  const [previousItemText, setPreviousItemText] = useState("");
+
   const [isMuted, setIsMuted] = useState(() => {
     return localStorage.getItem(MUTED_STORAGE_KEY) === "true";
   });
+
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
 
@@ -132,7 +191,21 @@ function App() {
 
   function handleAddItem() {
     const trimmedText = newItemText.trim();
-    if (!trimmedText) return;
+    const normalizedText = trimmedText.toLowerCase();
+
+    if (!trimmedText) {
+      setAddItemError("Please enter an item name.");
+      return;
+    }
+
+    const itemAlreadyExists = items.some(
+      (item) => item.text.trim().toLowerCase() === normalizedText,
+    );
+
+    if (itemAlreadyExists) {
+      setAddItemError("That item is already on the wheel.");
+      return;
+    }
 
     setItems((prevItems) => {
       const nextColor = getLeastUsedColor(prevItems);
@@ -152,11 +225,33 @@ function App() {
     });
 
     setNewItemText("");
+    setAddItemError("");
+  }
+
+  function handleResetSavedWheel() {
+    const shouldReset = window.confirm(
+      "Reset the wheel back to the default items? This will remove your saved custom wheel.",
+    );
+
+    if (!shouldReset) return;
+
+    setItems(createDefaultItems());
+    setMode("normal");
+    setNewItemText("");
+    setAddItemError("");
   }
 
   return (
     <main className={`app ${theme === "dark" ? "dark-theme" : "light-theme"}`}>
-      <h1>The Wheel</h1>
+      <header className="app-header">
+        <img src="/logo.png" alt="Wheel of Destiny logo" className="app-logo" />
+
+        <div className="app-text">
+          <h1 className="app-title">Big Wheel</h1>
+
+          <p className="app-subtitle">Choose. Spin. Decide.</p>
+        </div>
+      </header>
 
       {/* Mode Selector */}
       <section className="mode-panel">
@@ -209,7 +304,10 @@ function App() {
           value={newItemText}
           placeholder="Add new item"
           aria-label="Add new wheel item"
-          onChange={(event) => setNewItemText(event.target.value)}
+          onChange={(event) => {
+            setNewItemText(event.target.value);
+            setAddItemError("");
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               handleAddItem();
@@ -221,6 +319,8 @@ function App() {
           Add Item
         </button>
       </section>
+
+      {addItemError && <p className="add-item-error">{addItemError}</p>}
 
       {/* Item List */}
       <section className="item-list">
@@ -236,15 +336,46 @@ function App() {
               value={item.text}
               placeholder="Enter item"
               aria-label={`Edit text for ${item.text || "item"}`}
-              onChange={(event) =>
+              onFocus={(event) => {
+                setPreviousItemText(event.target.value);
+              }}
+              onChange={(event) => {
+                const newText = event.target.value.trim().toLowerCase();
+
+                const duplicateExists = items.some(
+                  (currentItem) =>
+                    currentItem.id !== item.id &&
+                    currentItem.text.trim().toLowerCase() === newText,
+                );
+
+                if (duplicateExists) {
+                  setAddItemError("That item is already on the wheel.");
+                  return;
+                }
+
+                setAddItemError("");
+
                 setItems((prevItems) =>
                   prevItems.map((currentItem) =>
                     currentItem.id === item.id
                       ? { ...currentItem, text: event.target.value }
                       : currentItem,
                   ),
-                )
-              }
+                );
+              }}
+              onBlur={(event) => {
+                if (!event.target.value.trim()) {
+                  setAddItemError("Item names cannot be blank.");
+
+                  setItems((prevItems) =>
+                    prevItems.map((currentItem) =>
+                      currentItem.id === item.id
+                        ? { ...currentItem, text: previousItemText }
+                        : currentItem,
+                    ),
+                  );
+                }
+              }}
             />
 
             <label className="weight-input-label">
@@ -254,14 +385,14 @@ function App() {
                 type="number"
                 min="0"
                 step="1"
-                value={item.weight}
+                value={item.weight === 0 ? "" : item.weight}
                 onChange={(event) =>
                   setItems((prevItems) =>
                     prevItems.map((currentItem) =>
                       currentItem.id === item.id
                         ? {
                             ...currentItem,
-                            weight: Number(event.target.value),
+                            weight: normalizeWholeNumber(event.target.value),
                           }
                         : currentItem,
                     ),
@@ -276,6 +407,7 @@ function App() {
 
             <button
               className="delete-item-button"
+              aria-label={`Delete ${item.text || "item"}`}
               onClick={() =>
                 setItems((prevItems) =>
                   prevItems.filter((currentItem) => currentItem.id !== item.id),
@@ -294,6 +426,7 @@ function App() {
       >
         Reset Saved Wheel
       </button>
+
       <footer className="app-footer">
         <p>© {new Date().getFullYear()} The Wheel</p>
 
@@ -318,18 +451,6 @@ function App() {
       </footer>
     </main>
   );
-
-  function handleResetSavedWheel() {
-    const shouldReset = window.confirm(
-      "Reset the wheel back to the default items? This will remove your saved custom wheel.",
-    );
-
-    if (!shouldReset) return;
-
-    setItems(createDefaultItems());
-    setMode("normal");
-    setNewItemText("");
-  }
 }
 
 export default App;

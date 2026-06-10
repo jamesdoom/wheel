@@ -10,31 +10,12 @@
   height: auto;
   aspect-ratio: 1 / 1;
   filter: drop-shadow(0 12px 24px rgba(15, 23, 42, 0.18));
+  margin-bottom: 1.5rem;
 }
 
 .spin-button {
-  margin-top: 1rem;
-  padding: 0.85rem 2.5rem;
-  border: none;
-  border-radius: 999px;
-  background: #111827;
-  color: white;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    transform 120ms ease,
-    background 120ms ease,
-    opacity 120ms ease;
-}
-
-.spin-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: #1f2937;
-}
-
-.spin-button:active:not(:disabled) {
-  transform: translateY(1px);
+  margin-top: 1.5rem;
+  padding: 0.7rem 1.35rem;
 }
 
 .spin-button:focus-visible {
@@ -46,13 +27,9 @@
   cursor: not-allowed;
   opacity: 0.65;
 }
-.dark-theme .spin-button {
-  background: #f9fafb;
-  color: #111827;
-}
 
 .dark-theme .spin-button:hover:not(:disabled) {
-  background: #e5e7eb;
+  background: #4925b9;
 }
 
 .result-display {

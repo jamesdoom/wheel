@@ -1,3 +1,26 @@
+@font-face {
+  font-family: "WheelFont1";
+  src: url("./assets/fonts/Sekuya-Regular.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "WheelFont2";
+  src: url("./assets/fonts/Cinzel-VariableFont_wght.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "WheelFont3";
+  src: url("./assets/fonts/LeagueSpartan-VariableFont_wght.ttf")
+    format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Base */
 * {
   box-sizing: border-box;
 }
@@ -22,12 +45,169 @@
   color: #f9fafb;
 }
 
-.app h1 {
-  text-align: center;
-  margin-bottom: 2rem;
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  margin-bottom: 1rem;
 }
 
+.app-logo {
+  width: 100px;
+  height: auto;
+  flex-shrink: 0;
+  transition: transform 0.4s ease;
+}
+
+.app-logo:hover {
+  transform: rotate(12deg);
+}
+
+.app-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.app-title {
+  font-family: "WheelFont2", serif;
+  margin: 0;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 0.95;
+  text-align: left;
+}
+
+.app-subtitle {
+  font-family: "WheelFont2", serif;
+  margin: 0.15rem 0 0 0.2rem;
+  font-size: 1.05rem;
+  opacity: 0.75;
+  font-style: italic;
+}
+
+input,
+select {
+  font-family: "WheelFont3", serif;
+}
+
+select {
+  color: #0a1338;
+
+  border: 1px solid #0a1338;
+  border-radius: 8px;
+  padding: 0.25rem 0.5rem;
+}
+
+.mode-panel {
+  font-family: "WheelFont3", serif;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.controls-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.mute-button,
+.theme-button,
+.spin-button,
+.add-item-button {
+  font-family: "WheelFont3", serif;
+  padding: 0.55rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1328a8 0%, #010f65 100%);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  margin: 0;
+  box-shadow: 0 4px 12px rgba(73, 37, 185, 0.25);
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.spin-button {
+  font-family: "WheelFont1", serif;
+}
+
+.mute-button:hover,
+.theme-button:hover,
+.spin-button:hover,
+.add-item-button:hover {
+  background: linear-gradient(135deg, #4925b9 0%, #2a1380 100%);
+  box-shadow: 0 8px 20px rgba(73, 37, 185, 0.4);
+  transform: translateY(-1px);
+}
+
+.mute-button:active,
+.theme-button:active,
+.spin-button:active,
+.add-item-button:active {
+  transform: translateY(1px);
+}
+
+.spin-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.spin-button:disabled:hover {
+  background: linear-gradient(135deg, #1328a8 0%, #010f65 100%);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Add Item */
+.add-item-panel {
+  font-family: "WheelFont3", serif;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto 1rem;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.add-item-input {
+  font-family: "WheelFont3", serif;
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.add-item-input:focus,
+.item-text-input:focus {
+  outline: 2px solid #93c5fd;
+  border-color: #2563eb;
+}
+
+.add-item-error {
+  text-align: center;
+  color: #ef4444;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+/* Item List */
 .item-list {
+  font-family: "WheelFont3", serif;
   width: 100%;
   max-width: 500px;
   margin: 0 auto;
@@ -54,17 +234,26 @@
   border-bottom: none;
 }
 
-.color-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  flex-shrink: 0;
+.item-text-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font: inherit;
 }
 
 .weight {
   margin-left: auto;
   color: #6b7280;
   font-size: 0.9rem;
+}
+
+.color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  flex-shrink: 0;
 }
 
 .color-red {
@@ -99,39 +288,6 @@
   background: #f472b6;
 }
 
-.mode-panel {
-  width: 100%;
-  max-width: 500px;
-  margin: 0 auto 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.item-text-input {
-  flex: 1;
-  min-width: 0;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font: inherit;
-}
-
-.item-text-input:focus {
-  outline: 2px solid #93c5fd;
-  border-color: #2563eb;
-}
-
-.dark-theme .add-item-button {
-  background: #f9fafb;
-  color: #111827;
-}
-
-.dark-theme .add-item-button:hover {
-  background: #e5e7eb;
-}
-
 .delete-item-button {
   border: none;
   background: transparent;
@@ -146,40 +302,34 @@
   color: #dc2626;
 }
 
-.add-item-panel {
-  width: 100%;
-  max-width: 500px;
-  margin: 0 auto 1rem;
-  display: flex;
-  gap: 0.75rem;
-}
-
-.add-item-input {
-  flex: 1;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font: inherit;
-}
-
-.add-item-input:focus {
-  outline: 2px solid #93c5fd;
-  border-color: #2563eb;
-}
-
-.add-item-button {
-  padding: 0.6rem 1rem;
+/* Reset */
+.reset-saved-wheel-button {
+  font-family: "WheelFont3", serif;
+  display: block;
+  margin: 1rem auto 1rem;
+  padding: 0.55rem 1rem;
   border: none;
-  border-radius: 8px;
-  background: #111827;
+  border-radius: 999px;
+  background: #ef4444;
   color: white;
   font-weight: 700;
   cursor: pointer;
 }
 
+.reset-saved-wheel-button:hover {
+  background: #dc2626;
+}
+
+.reset-saved-wheel-button:focus-visible {
+  outline: 3px solid #fecaca;
+  outline-offset: 3px;
+}
+
+/* Footer */
 .app-footer {
+  font-family: "WheelFont3", serif;
   max-width: 700px;
-  margin: 3rem auto 0;
+  margin: 1rem auto 0;
   padding: 1.5rem 1rem;
   text-align: center;
   color: #6b7280;
@@ -200,45 +350,10 @@
   text-decoration: underline;
 }
 
-.controls-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.mute-button,
-.theme-button {
-  padding: 0.55rem 1rem;
-  border: none;
-  border-radius: 999px;
-  font-weight: 700;
-  cursor: pointer;
-  margin: 0;
-}
-
-.mute-button {
-  background: #374151;
-  color: white;
-}
-
-.mute-button:hover {
-  background: #111827;
-}
-
-.theme-button {
-  background: #2563eb;
-  color: white;
-}
-
-.theme-button:hover {
-  background: #1d4ed8;
-}
-
+/* Dark Theme */
 .dark-theme .item-list,
 .dark-theme .result-modal {
-  background: #1f2937;
+  background: #000020;
   color: #f9fafb;
 }
 
@@ -248,6 +363,7 @@
 
 .dark-theme input,
 .dark-theme select {
+  font-family: "WheelFont3", serif;
   background: #111827;
   color: #f9fafb;
   border-color: #4b5563;
@@ -257,28 +373,42 @@
   color: #9ca3af;
 }
 
-.reset-saved-wheel-button {
-  display: block;
-  margin: 1rem auto 1.5rem;
-  padding: 0.55rem 1rem;
-  border: none;
-  border-radius: 999px;
-  background: #ef4444;
+.dark-theme .add-item-input {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.dark-theme select {
+  background: #0a1338;
   color: white;
-  font-weight: 700;
-  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.25rem 0.5rem;
 }
 
-.reset-saved-wheel-button:hover {
-  background: #dc2626;
-}
-
-.reset-saved-wheel-button:focus-visible {
-  outline: 3px solid #fecaca;
-  outline-offset: 3px;
-}
-
+/* Mobile */
 @media (max-width: 520px) {
+  .app {
+    padding: 1rem;
+  }
+
+  .app-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .app-text {
+    align-items: center;
+  }
+
+  .app-title,
+  .app-subtitle {
+    text-align: center;
+  }
+
+  .app-logo {
+    width: 90px;
+  }
+
   .controls-row {
     flex-direction: column;
     align-items: stretch;
@@ -289,6 +419,10 @@
     width: auto;
     min-width: 180px;
     align-self: center;
+  }
+
+  .item-list {
+    padding: 1rem;
   }
 
   .item-row {
@@ -330,19 +464,14 @@
 
   .add-item-panel {
     flex-direction: column;
+    margin: 0 auto 1.25rem;
+    align-items: center;
   }
 
   .add-item-button {
     width: auto;
     align-self: center;
-  }
-
-  .app {
-    padding: 1rem;
-  }
-
-  .item-list {
-    padding: 1rem;
+    white-space: nowrap;
   }
 
   .spin-button,
