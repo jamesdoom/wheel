@@ -21,6 +21,65 @@ type WheelCanvasProps = {
   theme: "light" | "dark";
 };
 
+const CANVAS_SIZE = 460;
+const WHEEL_CENTER = 212;
+const WHEEL_RADIUS = 178;
+const HUB_RADIUS = 52;
+const MAX_DEVICE_PIXEL_RATIO = 2;
+
+function hexToRgb(hexColor: string) {
+  const normalizedColor = hexColor.replace("#", "");
+  const colorValue = Number.parseInt(normalizedColor, 16);
+
+  if (normalizedColor.length !== 6 || Number.isNaN(colorValue)) {
+    return { r: 96, g: 165, b: 250 };
+  }
+
+  return {
+    r: (colorValue >> 16) & 255,
+    g: (colorValue >> 8) & 255,
+    b: colorValue & 255,
+  };
+}
+
+function mixColor(hexColor: string, target: "black" | "white", amount: number) {
+  const { r, g, b } = hexToRgb(hexColor);
+  const targetValue = target === "white" ? 255 : 0;
+  const mix = (channel: number) =>
+    Math.round(channel + (targetValue - channel) * amount);
+
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
+
+function getTextColor(hexColor: string) {
+  const { r, g, b } = hexToRgb(hexColor);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+
+  return luminance > 0.58 ? "#111827" : "#f9fafb";
+}
+
+function truncateTextToWidth(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+) {
+  if (ctx.measureText(text).width <= maxWidth) {
+    return text;
+  }
+
+  const ellipsis = "...";
+  let truncatedText = text;
+
+  while (
+    truncatedText.length > 0 &&
+    ctx.measureText(`${truncatedText}${ellipsis}`).width > maxWidth
+  ) {
+    truncatedText = truncatedText.slice(0, -1);
+  }
+
+  return truncatedText ? `${truncatedText}${ellipsis}` : ellipsis;
+}
+
 function WheelCanvas({
   items,
   setItems,
@@ -66,10 +125,29 @@ function WheelCanvas({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      const size = canvas.width;
-      const center = size / 2;
-      const radius = center - 10;
+      const pixelRatio = Math.min(
+        window.devicePixelRatio || 1,
+        MAX_DEVICE_PIXEL_RATIO,
+      );
+      const canvasPixelSize = CANVAS_SIZE * pixelRatio;
+
+      if (canvas.width !== canvasPixelSize) {
+        canvas.width = canvasPixelSize;
+        canvas.height = canvasPixelSize;
+      }
+
+      ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+      const size = CANVAS_SIZE;
+      const center = WHEEL_CENTER;
+      const radius = WHEEL_RADIUS;
       const frameColor = theme === "dark" ? "#f9fafb" : "#111827";
+      const rimShadow =
+        theme === "dark"
+          ? "rgba(0, 0, 0, 0.45)"
+          : "rgba(15, 23, 42, 0.22)";
+      const hubOuterColor = theme === "dark" ? "#111827" : "#ffffff";
+      const hubInnerColor = theme === "dark" ? "#273449" : "#f8fafc";
 
       const weightedSegments = getWeightedSegments(items);
 
@@ -77,9 +155,9 @@ function WheelCanvas({
         ctx.clearRect(0, 0, size, size);
 
         ctx.beginPath();
-        ctx.arc(center, center, radius, 0, Math.PI * 2);
+        ctx.arc(center, center, radius, 0, FULL_CIRCLE);
         ctx.strokeStyle = frameColor;
-        ctx.lineWidth = 8;
+        ctx.lineWidth = 12;
         ctx.stroke();
 
         return;
@@ -88,53 +166,160 @@ function WheelCanvas({
       ctx.clearRect(0, 0, size, size);
 
       ctx.save();
+      ctx.shadowColor = rimShadow;
+      ctx.shadowBlur = 26;
+      ctx.shadowOffsetY = 18;
+      ctx.beginPath();
+      ctx.arc(center, center, radius + 10, 0, FULL_CIRCLE);
+      ctx.fillStyle = theme === "dark" ? "#020617" : "#e5e7eb";
+      ctx.fill();
+      ctx.restore();
+
+      ctx.save();
       ctx.translate(center, center);
       ctx.rotate(rotationValue);
       ctx.translate(-center, -center);
 
       weightedSegments.forEach(({ item, startAngle, endAngle }) => {
         const textAngle = startAngle + (endAngle - startAngle) / 2;
+        const segmentAngle = endAngle - startAngle;
+        const gradient = ctx.createRadialGradient(
+          center,
+          center,
+          HUB_RADIUS * 0.7,
+          center,
+          center,
+          radius,
+        );
+        gradient.addColorStop(0, mixColor(item.color, "white", 0.28));
+        gradient.addColorStop(0.72, item.color);
+        gradient.addColorStop(1, mixColor(item.color, "black", 0.12));
 
-        // Draw slice
         ctx.beginPath();
         ctx.moveTo(center, center);
         ctx.arc(center, center, radius, startAngle, endAngle);
         ctx.closePath();
-        ctx.fillStyle = item.color;
+        ctx.fillStyle = gradient;
         ctx.fill();
 
-        // Draw border
-        ctx.strokeStyle = "#ffffff";
+        ctx.strokeStyle =
+          theme === "dark" ? "rgba(255, 255, 255, 0.72)" : "#ffffff";
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Draw text
+        if (segmentAngle < 0.13) {
+          return;
+        }
+
+        const availableWidth = Math.max(36, radius - HUB_RADIUS - 48);
+        const fontSize = Math.max(11, Math.min(16, segmentAngle * 23));
+
         ctx.save();
         ctx.translate(center, center);
         ctx.rotate(textAngle);
-        ctx.textAlign = "right";
-        ctx.fillStyle = "#111827";
-        ctx.font = "bold 16px Arial";
-        ctx.fillText(item.text, radius - 24, 6);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = getTextColor(item.color);
+        ctx.font = `700 ${fontSize}px Arial`;
+        ctx.shadowColor =
+          theme === "dark" ? "rgba(0, 0, 0, 0.28)" : "rgba(255, 255, 255, 0.55)";
+        ctx.shadowBlur = 2;
+
+        const isLeftSide = textAngle > Math.PI / 2 && textAngle < Math.PI * 1.5;
+        const labelRadius = HUB_RADIUS + (radius - HUB_RADIUS) * 0.58;
+
+        if (isLeftSide) {
+          ctx.rotate(Math.PI);
+        }
+
+        const label = truncateTextToWidth(ctx, item.text, availableWidth);
+        ctx.fillText(label, isLeftSide ? -labelRadius : labelRadius, 0);
         ctx.restore();
       });
 
       ctx.restore();
 
-      // Outer ring
+      const rimGradient = ctx.createRadialGradient(
+        center,
+        center,
+        radius - 20,
+        center,
+        center,
+        radius + 18,
+      );
+      rimGradient.addColorStop(0, "rgba(255, 255, 255, 0.38)");
+      rimGradient.addColorStop(0.48, frameColor);
+      rimGradient.addColorStop(
+        1,
+        theme === "dark" ? "#94a3b8" : "rgba(15, 23, 42, 0.78)",
+      );
+
       ctx.beginPath();
-      ctx.arc(center, center, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = frameColor;
-      ctx.lineWidth = 8;
+      ctx.arc(center, center, radius + 8, 0, FULL_CIRCLE);
+      ctx.strokeStyle = rimGradient;
+      ctx.lineWidth = 16;
       ctx.stroke();
 
-      // Pointer
       ctx.beginPath();
-      ctx.moveTo(center + radius + 4, center);
-      ctx.lineTo(center + radius + 28, center - 14);
-      ctx.lineTo(center + radius + 28, center + 14);
+      ctx.arc(center, center, radius - 2, 0, FULL_CIRCLE);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.52)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      const hubGradient = ctx.createRadialGradient(
+        center - 16,
+        center - 18,
+        8,
+        center,
+        center,
+        HUB_RADIUS + 14,
+      );
+      hubGradient.addColorStop(0, "#ffffff");
+      hubGradient.addColorStop(0.42, hubInnerColor);
+      hubGradient.addColorStop(1, hubOuterColor);
+
+      ctx.save();
+      ctx.shadowColor = rimShadow;
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetY = 8;
+      ctx.beginPath();
+      ctx.arc(center, center, HUB_RADIUS, 0, FULL_CIRCLE);
+      ctx.fillStyle = hubGradient;
+      ctx.fill();
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(center, center, HUB_RADIUS - 8, 0, FULL_CIRCLE);
+      ctx.strokeStyle =
+        theme === "dark" ? "rgba(255, 255, 255, 0.22)" : "rgba(15, 23, 42, 0.16)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = theme === "dark" ? "#f9fafb" : "#111827";
+      ctx.font = "800 19px Arial";
+      ctx.fillText("SPIN", center, center + 2);
+
+      ctx.save();
+      ctx.shadowColor = rimShadow;
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 4;
+      ctx.beginPath();
+      ctx.moveTo(center + radius - 20, center);
+      ctx.lineTo(center + radius + 18, center - 22);
+      ctx.lineTo(center + radius + 18, center + 22);
       ctx.closePath();
-      ctx.fillStyle = frameColor;
+      ctx.fillStyle = theme === "dark" ? "#f8fafc" : "#111827";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = theme === "dark" ? "#111827" : "#ffffff";
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(center + radius + 6, center, 5, 0, FULL_CIRCLE);
+      ctx.fillStyle = theme === "dark" ? "#111827" : "#f8fafc";
       ctx.fill();
     },
     [items, theme],
@@ -287,8 +472,8 @@ function WheelCanvas({
       <canvas
         ref={canvasRef}
         className="wheel-canvas"
-        width={420}
-        height={420}
+        width={CANVAS_SIZE}
+        height={CANVAS_SIZE}
       />
 
       {visibleItems.length <= 1 ? (
