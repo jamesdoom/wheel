@@ -1,6 +1,14 @@
 // src\components\Wheel\WheelCanvas.tsx
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { WheelItem, WheelMode } from "../../types";
+import {
+  FULL_CIRCLE,
+  getClockwiseRotationDelta,
+  getSelectableItems,
+  getTargetRotationForSegment,
+  getWeightedSegments,
+  pickWeightedWinner,
+} from "../../utils/wheel";
 import "./WheelCanvas.css";
 import ResultModal from "./ResultModal";
 
@@ -12,47 +20,6 @@ type WheelCanvasProps = {
   isMuted: boolean;
   theme: "light" | "dark";
 };
-
-const FULL_CIRCLE = Math.PI * 2;
-
-type WheelSegment = {
-  item: WheelItem;
-  startAngle: number;
-  endAngle: number;
-};
-
-function getSelectableItems(items: WheelItem[]) {
-  return items.filter(
-    (item) => !item.hidden && Number.isFinite(item.weight) && item.weight > 0,
-  );
-}
-
-function getWeightedSegments(items: WheelItem[]): WheelSegment[] {
-  const selectableItems = getSelectableItems(items);
-  const totalWeight = selectableItems.reduce(
-    (sum, item) => sum + item.weight,
-    0,
-  );
-
-  if (totalWeight <= 0) {
-    return [];
-  }
-
-  let currentAngle = 0;
-
-  return selectableItems.map((item) => {
-    const sliceAngle = (item.weight / totalWeight) * FULL_CIRCLE;
-    const segment = {
-      item,
-      startAngle: currentAngle,
-      endAngle: currentAngle + sliceAngle,
-    };
-
-    currentAngle += sliceAngle;
-
-    return segment;
-  });
-}
 
 function WheelCanvas({
   items,
@@ -177,24 +144,6 @@ function WheelCanvas({
     drawWheel(rotationRef.current);
   }, [drawWheel]);
 
-  function pickWeightedWinner(items: WheelItem[]): WheelItem | null {
-    const weightedItems = items.filter((item) => item.weight > 0);
-    if (weightedItems.length === 0) return null;
-
-    const totalWeight = weightedItems.reduce(
-      (sum, item) => sum + item.weight,
-      0,
-    );
-    let random = Math.random() * totalWeight;
-
-    for (const item of weightedItems) {
-      random -= item.weight;
-      if (random <= 0) return item;
-    }
-
-    return weightedItems[weightedItems.length - 1];
-  }
-
   function easeOutCubic(progress: number) {
     return 1 - Math.pow(1 - progress, 3);
   }
@@ -225,15 +174,11 @@ function WheelCanvas({
       return;
     }
 
-    const targetAngle =
-      winningSegment.startAngle +
-      (winningSegment.endAngle - winningSegment.startAngle) / 2;
-    const targetRotation = (FULL_CIRCLE - targetAngle) % FULL_CIRCLE;
-
-    const currentRotation =
-      ((rotationRef.current % FULL_CIRCLE) + FULL_CIRCLE) % FULL_CIRCLE;
-    const rotationDelta =
-      (targetRotation - currentRotation + FULL_CIRCLE) % FULL_CIRCLE;
+    const targetRotation = getTargetRotationForSegment(winningSegment);
+    const rotationDelta = getClockwiseRotationDelta(
+      rotationRef.current,
+      targetRotation,
+    );
 
     const extraSpins = FULL_CIRCLE * 6;
     const finalRotation = rotationRef.current + extraSpins + rotationDelta;

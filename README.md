@@ -1,73 +1,68 @@
-# React + TypeScript + Vite
+# Big Wheel
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React and TypeScript picker wheel for quick decisions, elimination rounds, and repeated tally-style spins.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Weighted wheel slices that visually match each item's chance to win
+- Normal, elimination, and accumulation modes
+- Local saved state for items, mode, theme, and mute preference
+- Light and dark themes
+- Sound effects with a mute toggle
+- Winner modal with keyboard support
 
-## React Compiler
+## Local Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Install dependencies:
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```powershell
+npm.cmd install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Start the dev server:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```powershell
+npm.cmd run dev -- --host 127.0.0.1
 ```
+
+Open the local URL Vite prints. By default it is:
+
+```text
+http://127.0.0.1:5173/
+```
+
+## Scripts
+
+```powershell
+npm.cmd run dev
+npm.cmd run build
+npm.cmd run lint
+npm.cmd run test
+npm.cmd run preview
+```
+
+## Wheel Modes
+
+`Normal` keeps all visible items available after each spin.
+
+`Elimination` hides the winning item after each spin until only one item remains.
+
+`Accumulation` keeps all items available and increments the winner's count after each spin.
+
+## Weights
+
+Each item has a non-negative whole-number weight. Items with a weight of `0` stay in the list but are not selectable on the wheel. At least two visible items must have a weight greater than `0` before the wheel can spin.
+
+## Verification
+
+Run the full local check before pushing changes:
+
+```powershell
+npm.cmd run lint
+npm.cmd run test
+npm.cmd run build
+```
+
+## Assets
+
+Sound effects are credited in the app footer. Custom fonts live in `src/assets/fonts`, and public images/icons live in `public`.
