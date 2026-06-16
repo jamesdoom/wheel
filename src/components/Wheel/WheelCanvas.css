@@ -7,17 +7,85 @@
   isolation: isolate;
 }
 
-.wheel-canvas {
+.wheel-stage {
+  position: relative;
   width: min(460px, 100%);
   max-width: calc(100vw - 2rem);
+  margin-bottom: 1.5rem;
+}
+
+.wheel-canvas {
+  display: block;
+  width: 100%;
   height: auto;
   aspect-ratio: 1 / 1;
   filter: drop-shadow(0 18px 34px rgba(15, 23, 42, 0.22));
-  margin-bottom: 1.5rem;
 }
 
 .dark-theme .wheel-canvas {
   filter: drop-shadow(0 22px 38px rgba(0, 0, 0, 0.42));
+}
+
+.center-spin-button {
+  position: absolute;
+  top: 46.087%;
+  left: 46.087%;
+  width: 22%;
+  min-width: 72px;
+  max-width: 102px;
+  aspect-ratio: 1 / 1;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #eef2f7 72%, #dbe3ef 100%);
+  color: #111827;
+  font-family: "WheelFont3", Arial, sans-serif;
+  font-size: clamp(0.95rem, 3vw, 1.2rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  cursor: pointer;
+  box-shadow:
+    0 10px 22px rgba(15, 23, 42, 0.28),
+    inset 0 -4px 0 rgba(15, 23, 42, 0.12);
+  transform: translate(-50%, -50%);
+  transition:
+    box-shadow 120ms ease,
+    filter 120ms ease,
+    transform 120ms ease;
+}
+
+.center-spin-button:hover:not(:disabled) {
+  filter: brightness(1.03);
+  box-shadow:
+    0 12px 26px rgba(15, 23, 42, 0.32),
+    inset 0 -4px 0 rgba(15, 23, 42, 0.12);
+}
+
+.center-spin-button:active:not(:disabled) {
+  box-shadow:
+    0 5px 12px rgba(15, 23, 42, 0.24),
+    inset 0 4px 10px rgba(15, 23, 42, 0.18);
+  transform: translate(-50%, -47%) scale(0.94);
+}
+
+.center-spin-button:focus-visible {
+  outline: 4px solid #93c5fd;
+  outline-offset: 4px;
+}
+
+.center-spin-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.78;
+}
+
+.dark-theme .center-spin-button {
+  border-color: rgba(255, 255, 255, 0.22);
+  background:
+    linear-gradient(180deg, #334155 0%, #1f2937 70%, #111827 100%);
+  color: #f9fafb;
+  box-shadow:
+    0 12px 26px rgba(0, 0, 0, 0.45),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.26);
 }
 
 .spin-button {
@@ -62,7 +130,11 @@
 }
 
 @media (max-width: 520px) {
-  .wheel-canvas {
+  .wheel-stage {
     width: min(360px, 100%);
+  }
+
+  .center-spin-button {
+    min-width: 64px;
   }
 }

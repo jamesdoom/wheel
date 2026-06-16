@@ -146,8 +146,8 @@ function WheelCanvas({
         theme === "dark"
           ? "rgba(0, 0, 0, 0.45)"
           : "rgba(15, 23, 42, 0.22)";
-      const hubOuterColor = theme === "dark" ? "#111827" : "#ffffff";
-      const hubInnerColor = theme === "dark" ? "#273449" : "#f8fafc";
+      const hubOuterColor = theme === "dark" ? "#111827" : "#f8fafc";
+      const hubInnerColor = theme === "dark" ? "#1f2937" : "#eef2f7";
 
       const weightedSegments = getWeightedSegments(items);
 
@@ -266,40 +266,27 @@ function WheelCanvas({
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      const hubGradient = ctx.createRadialGradient(
-        center - 16,
-        center - 18,
-        8,
-        center,
-        center,
-        HUB_RADIUS + 14,
-      );
-      hubGradient.addColorStop(0, "#ffffff");
-      hubGradient.addColorStop(0.42, hubInnerColor);
-      hubGradient.addColorStop(1, hubOuterColor);
-
       ctx.save();
       ctx.shadowColor = rimShadow;
-      ctx.shadowBlur = 18;
-      ctx.shadowOffsetY = 8;
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 6;
       ctx.beginPath();
       ctx.arc(center, center, HUB_RADIUS, 0, FULL_CIRCLE);
-      ctx.fillStyle = hubGradient;
+      ctx.fillStyle = hubOuterColor;
       ctx.fill();
       ctx.restore();
 
       ctx.beginPath();
-      ctx.arc(center, center, HUB_RADIUS - 8, 0, FULL_CIRCLE);
+      ctx.arc(center, center, HUB_RADIUS - 7, 0, FULL_CIRCLE);
+      ctx.fillStyle = hubInnerColor;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(center, center, HUB_RADIUS - 7, 0, FULL_CIRCLE);
       ctx.strokeStyle =
         theme === "dark" ? "rgba(255, 255, 255, 0.22)" : "rgba(15, 23, 42, 0.16)";
       ctx.lineWidth = 2;
       ctx.stroke();
-
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = theme === "dark" ? "#f9fafb" : "#111827";
-      ctx.font = "800 19px Arial";
-      ctx.fillText("SPIN", center, center + 2);
 
       ctx.save();
       ctx.shadowColor = rimShadow;
@@ -469,24 +456,29 @@ function WheelCanvas({
 
   return (
     <section className="wheel-card">
-      <canvas
-        ref={canvasRef}
-        className="wheel-canvas"
-        width={CANVAS_SIZE}
-        height={CANVAS_SIZE}
-      />
+      <div className="wheel-stage">
+        <canvas
+          ref={canvasRef}
+          className="wheel-canvas"
+          width={CANVAS_SIZE}
+          height={CANVAS_SIZE}
+        />
 
-      {visibleItems.length <= 1 ? (
+        {visibleItems.length > 1 && (
+          <button
+            className="center-spin-button"
+            onClick={handleSpin}
+            disabled={isSpinning || !canSpin}
+            aria-label={isSpinning ? "Wheel is spinning" : "Spin the wheel"}
+          >
+            {isSpinning ? "..." : "SPIN"}
+          </button>
+        )}
+      </div>
+
+      {visibleItems.length <= 1 && (
         <button className="spin-button reset-button" onClick={handleReset}>
           Reset Wheel
-        </button>
-      ) : (
-        <button
-          className="spin-button"
-          onClick={handleSpin}
-          disabled={isSpinning || !canSpin}
-        >
-          {isSpinning ? "Spinning..." : "Spin"}
         </button>
       )}
 
