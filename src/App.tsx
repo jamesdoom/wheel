@@ -18,11 +18,18 @@ const ITEMS_STORAGE_KEY = "wheel-items";
 const MODE_STORAGE_KEY = "wheel-mode";
 const MUTED_STORAGE_KEY = "wheel-muted";
 const THEME_STORAGE_KEY = "wheel-theme";
+const SAVED_WHEELS_STORAGE_KEY = "wheel-library";
 
 type WheelConfig = {
   version: 1;
   mode: WheelMode;
   items: WheelItem[];
+};
+
+type SavedWheel = WheelConfig & {
+  id: string;
+  name: string;
+  updatedAt: string;
 };
 
 function getNextColor(index: number) {
@@ -164,6 +171,52 @@ function parseWheelConfig(rawConfig: string): WheelConfig {
   return { version: 1, mode, items: normalizedItems };
 }
 
+function parseSavedWheels(savedWheels: string | null): SavedWheel[] {
+  if (!savedWheels) return [];
+
+  try {
+    const parsedWheels = JSON.parse(savedWheels);
+    if (!Array.isArray(parsedWheels)) return [];
+
+    return parsedWheels.flatMap((rawWheel): SavedWheel[] => {
+      if (!rawWheel || typeof rawWheel !== "object") return [];
+
+      const wheel = rawWheel as Partial<SavedWheel>;
+      const name = typeof wheel.name === "string" ? wheel.name.trim() : "";
+      if (!name || !Array.isArray(wheel.items)) return [];
+
+      const items = wheel.items
+        .map((item, index) => createStoredItem(item, index))
+        .filter((item): item is WheelItem => item !== null);
+      if (items.length === 0) return [];
+
+      const mode =
+        wheel.mode === "elimination" || wheel.mode === "accumulation"
+          ? wheel.mode
+          : "normal";
+
+      return [
+        {
+          id:
+            typeof wheel.id === "string" && wheel.id
+              ? wheel.id
+              : crypto.randomUUID(),
+          name,
+          version: 1,
+          mode,
+          items,
+          updatedAt:
+            typeof wheel.updatedAt === "string"
+              ? wheel.updatedAt
+              : new Date().toISOString(),
+        },
+      ];
+    });
+  } catch {
+    return [];
+  }
+}
+
 function App() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const [items, setItems] = useState<WheelItem[]>(() => {
@@ -194,6 +247,11 @@ function App() {
   const [addItemError, setAddItemError] = useState("");
   const [previousItemText, setPreviousItemText] = useState("");
   const [configStatus, setConfigStatus] = useState("");
+  const [savedWheels, setSavedWheels] = useState<SavedWheel[]>(() =>
+    parseSavedWheels(localStorage.getItem(SAVED_WHEELS_STORAGE_KEY)),
+  );
+  const [activeSavedWheelId, setActiveSavedWheelId] = useState("");
+  const [savedWheelName, setSavedWheelName] = useState("");
 
   const [isMuted, setIsMuted] = useState(() => {
     return localStorage.getItem(MUTED_STORAGE_KEY) === "true";
@@ -224,6 +282,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem(SAVED_WHEELS_STORAGE_KEY, JSON.stringify(savedWheels));
+  }, [savedWheels]);
 
   function handleAddItem() {
     const trimmedText = newItemText.trim();
@@ -275,6 +337,8 @@ function App() {
     setMode("normal");
     setNewItemText("");
     setAddItemError("");
+    setActiveSavedWheelId("");
+    setSavedWheelName("");
   }
 
   function handleExportWheel() {
@@ -297,6 +361,8 @@ function App() {
       const config = parseWheelConfig(await file.text());
       setItems(config.items);
       setMode(config.mode);
+      setActiveSavedWheelId("");
+      setSavedWheelName("");
       setAddItemError("");
       setConfigStatus(`Imported ${config.items.length} wheel items.`);
     } catch (error) {
@@ -308,6 +374,103 @@ function App() {
         importInputRef.current.value = "";
       }
     }
+  }
+
+  function loadSavedWheel(wheelId: string) {
+    const savedWheel = savedWheels.find((wheel) => wheel.id === wheelId);
+
+    if (!savedWheel) {
+      setActiveSavedWheelId("");
+      setSavedWheelName("");
+      return;
+    }
+
+    setItems(savedWheel.items.map((item) => ({ ...item })));
+    setMode(savedWheel.mode);
+    setActiveSavedWheelId(savedWheel.id);
+    setSavedWheelName(savedWheel.name);
+    setConfigStatus(`Loaded ${savedWheel.name}.`);
+  }
+
+  function handleSaveNamedWheel() {
+    const name = savedWheelName.trim();
+
+    if (!name) {
+      setConfigStatus("Enter a name before saving the wheel.");
+      return;
+    }
+
+    const updatedAt = new Date().toISOString();
+
+    if (activeSavedWheelId) {
+      setSavedWheels((currentWheels) =>
+        currentWheels.map((wheel) =>
+          wheel.id === activeSavedWheelId
+            ? { ...wheel, name, mode, items, updatedAt }
+            : wheel,
+        ),
+      );
+      setConfigStatus(`Updated ${name}.`);
+      return;
+    }
+
+    const savedWheel: SavedWheel = {
+      id: crypto.randomUUID(),
+      name,
+      version: 1,
+      mode,
+      items: items.map((item) => ({ ...item })),
+      updatedAt,
+    };
+
+    setSavedWheels((currentWheels) => [...currentWheels, savedWheel]);
+    setActiveSavedWheelId(savedWheel.id);
+    setConfigStatus(`Saved ${name}.`);
+  }
+
+  function handleDuplicateSavedWheel() {
+    const sourceWheel = savedWheels.find(
+      (wheel) => wheel.id === activeSavedWheelId,
+    );
+
+    if (!sourceWheel) {
+      setConfigStatus("Select a saved wheel before duplicating it.");
+      return;
+    }
+
+    const duplicate: SavedWheel = {
+      ...sourceWheel,
+      id: crypto.randomUUID(),
+      name: `${sourceWheel.name} Copy`,
+      items: sourceWheel.items.map((item) => ({
+        ...item,
+        id: crypto.randomUUID(),
+      })),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setSavedWheels((currentWheels) => [...currentWheels, duplicate]);
+    setItems(duplicate.items.map((item) => ({ ...item })));
+    setMode(duplicate.mode);
+    setActiveSavedWheelId(duplicate.id);
+    setSavedWheelName(duplicate.name);
+    setConfigStatus(`Created ${duplicate.name}.`);
+  }
+
+  function handleDeleteSavedWheel() {
+    const savedWheel = savedWheels.find(
+      (wheel) => wheel.id === activeSavedWheelId,
+    );
+    if (!savedWheel) return;
+
+    if (!window.confirm(`Delete the saved wheel "${savedWheel.name}"?`)) return;
+
+    setSavedWheels((currentWheels) =>
+      currentWheels.filter((wheel) => wheel.id !== savedWheel.id),
+    );
+    setActiveSavedWheelId("");
+    setSavedWheelName("");
+    setConfigStatus(`Deleted ${savedWheel.name}.`);
   }
 
   return (
@@ -378,6 +541,45 @@ function App() {
             if (file) void handleImportWheel(file);
           }}
         />
+      </section>
+
+      <section className="saved-wheel-panel" aria-labelledby="saved-wheel-title">
+        <h2 id="saved-wheel-title">Saved Wheels</h2>
+
+        <div className="saved-wheel-fields">
+          <select
+            value={activeSavedWheelId}
+            aria-label="Select a saved wheel"
+            onChange={(event) => loadSavedWheel(event.target.value)}
+          >
+            <option value="">Current unsaved wheel</option>
+            {savedWheels.map((wheel) => (
+              <option value={wheel.id} key={wheel.id}>
+                {wheel.name}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="text"
+            value={savedWheelName}
+            placeholder="Wheel name"
+            aria-label="Saved wheel name"
+            onChange={(event) => setSavedWheelName(event.target.value)}
+          />
+        </div>
+
+        <div className="saved-wheel-actions">
+          <button onClick={handleSaveNamedWheel}>Save Current</button>
+          <button onClick={handleDuplicateSavedWheel}>Duplicate</button>
+          <button
+            className="saved-wheel-delete"
+            onClick={handleDeleteSavedWheel}
+            disabled={!activeSavedWheelId}
+          >
+            Delete
+          </button>
+        </div>
       </section>
 
       {configStatus && (

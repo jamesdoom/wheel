@@ -156,6 +156,66 @@ select {
   text-align: center;
 }
 
+.saved-wheel-panel {
+  width: min(500px, 100%);
+  margin: 0 auto 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  font-family: "WheelFont3", serif;
+}
+
+.saved-wheel-panel h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.saved-wheel-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.saved-wheel-fields input,
+.saved-wheel-fields select {
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.saved-wheel-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.saved-wheel-actions button {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.saved-wheel-actions button:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.saved-wheel-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.saved-wheel-actions .saved-wheel-delete {
+  color: #dc2626;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -421,6 +481,13 @@ select {
   border-color: #475569;
 }
 
+.dark-theme .saved-wheel-panel,
+.dark-theme .saved-wheel-fields input,
+.dark-theme .saved-wheel-fields select,
+.dark-theme .saved-wheel-actions button {
+  border-color: #475569;
+}
+
 .dark-theme input::placeholder {
   color: #9ca3af;
 }
@@ -467,6 +534,14 @@ select {
   }
 
   .config-actions {
+    flex-wrap: wrap;
+  }
+
+  .saved-wheel-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-wheel-actions {
     flex-wrap: wrap;
   }
 
