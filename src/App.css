@@ -101,30 +101,90 @@ select {
   padding: 0.25rem 0.5rem;
 }
 
-.mode-panel {
-  font-family: "WheelFont3", serif;
-  width: 100%;
-  max-width: 500px;
-  margin: 0 auto 1rem;
+.control-toolbar {
+  width: min(680px, 100%);
+  margin: 0 auto 1.25rem;
+  padding: 0.55rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  border-top: 1px solid #dbe2ea;
+  border-bottom: 1px solid #dbe2ea;
+  font-family: "WheelFont3", serif;
 }
 
-.controls-row {
+.toolbar-mode {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: 0.4rem;
+  margin-right: 0.2rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.toolbar-mode select {
+  min-height: 36px;
+}
+
+.toolbar-button {
+  min-height: 36px;
+  padding: 0.42rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.toolbar-button:hover,
+.toolbar-button[aria-expanded="true"] {
+  border-color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.toolbar-button:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.manage-toggle {
+  margin-left: 0.2rem;
+  color: #1d4ed8;
+}
+
+.manage-wheel-panel {
+  width: min(560px, 100%);
+  margin: -0.5rem auto 1.25rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid #dbe2ea;
+  border-bottom: 1px solid #dbe2ea;
+  font-family: "WheelFont3", serif;
+}
+
+.manage-wheel-heading {
+  padding: 0 0.75rem;
+  text-align: center;
+}
+
+.manage-wheel-heading h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.manage-wheel-heading p {
+  margin: 0.2rem 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
 }
 
 .config-actions {
   display: flex;
   justify-content: center;
   gap: 0.5rem;
-  margin: -0.25rem auto 0.75rem;
+  margin: 0.75rem auto;
 }
 
 .config-action-button {
@@ -158,14 +218,15 @@ select {
 
 .saved-wheel-panel {
   width: min(500px, 100%);
-  margin: 0 auto 0.75rem;
+  margin: 0 auto;
   padding: 0.75rem;
-  border: 1px solid #dbe2ea;
-  border-radius: 8px;
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+  border-radius: 0;
   font-family: "WheelFont3", serif;
 }
 
-.saved-wheel-panel h2 {
+.saved-wheel-panel h3 {
   margin: 0 0 0.6rem;
   font-size: 1rem;
   text-align: center;
@@ -666,6 +727,16 @@ select {
   border-color: #475569;
 }
 
+.dark-theme .control-toolbar,
+.dark-theme .manage-wheel-panel,
+.dark-theme .saved-wheel-panel {
+  border-color: #374151;
+}
+
+.dark-theme .manage-toggle {
+  color: #93c5fd;
+}
+
 .dark-theme .saved-wheel-panel,
 .dark-theme .saved-wheel-fields input,
 .dark-theme .saved-wheel-fields select,
@@ -713,9 +784,27 @@ select {
     width: 90px;
   }
 
-  .controls-row {
-    flex-direction: column;
-    align-items: stretch;
+  .control-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .toolbar-mode {
+    grid-column: 1 / -1;
+    justify-content: center;
+    margin: 0 0 0.2rem;
+  }
+
+  .toolbar-button {
+    width: 100%;
+    min-height: 42px;
+    white-space: nowrap;
+  }
+
+  .manage-toggle {
+    grid-column: 1 / -1;
+    margin-left: 0;
   }
 
   .config-actions {
@@ -735,11 +824,9 @@ select {
     gap: 0.15rem;
   }
 
-  .mute-button,
-  .theme-button {
-    width: auto;
-    min-width: 180px;
-    align-self: center;
+  .bulk-item-actions {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .item-list {
@@ -803,8 +890,6 @@ select {
 
   .spin-button,
   .add-item-button,
-  .mute-button,
-  .theme-button,
   .reset-saved-wheel-button {
     min-height: 48px;
   }

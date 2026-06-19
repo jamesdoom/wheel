@@ -298,6 +298,7 @@ function App() {
   const [previousItemText, setPreviousItemText] = useState("");
   const [bulkItemText, setBulkItemText] = useState("");
   const [configStatus, setConfigStatus] = useState("");
+  const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [savedWheels, setSavedWheels] = useState<SavedWheel[]>(() =>
     parseSavedWheels(localStorage.getItem(SAVED_WHEELS_STORAGE_KEY)),
   );
@@ -648,113 +649,132 @@ function App() {
         <img src="/logo.png" alt="Wheel of Destiny logo" className="app-logo" />
 
         <div className="app-text">
-          <h1 className="app-title">Big Wheel</h1>
+          <h1 className="app-title">The Wheel</h1>
 
           <p className="app-subtitle">Choose. Spin. Decide.</p>
         </div>
       </header>
 
-      {/* Mode Selector */}
-      <section className="mode-panel">
-        <label htmlFor="wheel-mode">Mode</label>
+      <section className="control-toolbar" aria-label="Wheel controls">
+        <label className="toolbar-mode" htmlFor="wheel-mode">
+          <span>Mode</span>
+          <select
+            id="wheel-mode"
+            value={mode}
+            onChange={(event) => setMode(event.target.value as WheelMode)}
+          >
+            <option value="normal">Normal</option>
+            <option value="elimination">Elimination</option>
+            <option value="accumulation">Accumulation</option>
+          </select>
+        </label>
 
-        <select
-          id="wheel-mode"
-          value={mode}
-          onChange={(e) => setMode(e.target.value as WheelMode)}
-        >
-          <option value="normal">Normal</option>
-          <option value="elimination">Elimination</option>
-          <option value="accumulation">Accumulation</option>
-        </select>
-      </section>
-
-      <div className="controls-row">
         <button
-          className="mute-button"
+          className="toolbar-button"
           onClick={() => setIsMuted((prev) => !prev)}
         >
           {isMuted ? "Unmute Sound" : "Mute Sound"}
         </button>
 
         <button
-          className="theme-button"
+          className="toolbar-button"
           onClick={() =>
             setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"))
           }
         >
           {theme === "dark" ? "Light Mode" : "Dark Mode"}
         </button>
-      </div>
-
-      <section className="config-actions" aria-label="Wheel configuration">
-        <button className="config-action-button" onClick={handleExportWheel}>
-          Export Wheel
-        </button>
 
         <button
-          className="config-action-button"
-          onClick={() => importInputRef.current?.click()}
+          className="toolbar-button manage-toggle"
+          aria-expanded={isManagerOpen}
+          aria-controls="manage-wheel-panel"
+          onClick={() => setIsManagerOpen((isOpen) => !isOpen)}
         >
-          Import Wheel
+          {isManagerOpen ? "Close Manager" : "Manage Wheels"}
         </button>
-
-        <input
-          ref={importInputRef}
-          className="visually-hidden"
-          type="file"
-          accept="application/json,.json"
-          aria-label="Import wheel configuration"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void handleImportWheel(file);
-          }}
-        />
       </section>
 
-      <section className="saved-wheel-panel" aria-labelledby="saved-wheel-title">
-        <h2 id="saved-wheel-title">Saved Wheels</h2>
+      {isManagerOpen && (
+        <section
+          id="manage-wheel-panel"
+          className="manage-wheel-panel"
+          aria-labelledby="manage-wheel-title"
+        >
+          <div className="manage-wheel-heading">
+            <h2 id="manage-wheel-title">Manage Wheels</h2>
+            <p>Save, switch, import, or export wheel configurations.</p>
+          </div>
 
-        <div className="saved-wheel-fields">
-          <select
-            value={activeSavedWheelId}
-            aria-label="Select a saved wheel"
-            onChange={(event) => loadSavedWheel(event.target.value)}
-          >
-            <option value="">Current unsaved wheel</option>
-            {savedWheels.map((wheel) => (
-              <option value={wheel.id} key={wheel.id}>
-                {wheel.name}
-              </option>
-            ))}
-          </select>
+          <section className="config-actions" aria-label="Wheel configuration">
+            <button className="config-action-button" onClick={handleExportWheel}>
+              Export Wheel
+            </button>
+            <button
+              className="config-action-button"
+              onClick={() => importInputRef.current?.click()}
+            >
+              Import Wheel
+            </button>
+          </section>
 
           <input
-            type="text"
-            value={savedWheelName}
-            placeholder="Wheel name"
-            aria-label="Saved wheel name"
-            onChange={(event) => setSavedWheelName(event.target.value)}
+            ref={importInputRef}
+            className="visually-hidden"
+            type="file"
+            accept="application/json,.json"
+            aria-label="Import wheel configuration"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void handleImportWheel(file);
+            }}
           />
-        </div>
 
-        <div className="saved-wheel-actions">
-          <button onClick={handleSaveNamedWheel}>Save Current</button>
-          <button onClick={handleDuplicateSavedWheel}>Duplicate</button>
-          <button
-            className="saved-wheel-delete"
-            onClick={handleDeleteSavedWheel}
-            disabled={!activeSavedWheelId}
-          >
-            Delete
-          </button>
-        </div>
-      </section>
+          <section className="saved-wheel-panel" aria-labelledby="saved-wheel-title">
+            <h3 id="saved-wheel-title">Saved Wheels</h3>
 
-      {configStatus && (
-        <p className="config-status" role="status">
-          {configStatus}
-        </p>
+            <div className="saved-wheel-fields">
+              <select
+                value={activeSavedWheelId}
+                aria-label="Select a saved wheel"
+                onChange={(event) => loadSavedWheel(event.target.value)}
+              >
+                <option value="">Current unsaved wheel</option>
+                {savedWheels.map((wheel) => (
+                  <option value={wheel.id} key={wheel.id}>
+                    {wheel.name}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="text"
+                value={savedWheelName}
+                placeholder="Wheel name"
+                aria-label="Saved wheel name"
+                onChange={(event) => setSavedWheelName(event.target.value)}
+              />
+            </div>
+
+            <div className="saved-wheel-actions">
+              <button onClick={handleSaveNamedWheel}>Save Current</button>
+              <button onClick={handleDuplicateSavedWheel}>Duplicate</button>
+              <button
+                className="saved-wheel-delete"
+                onClick={handleDeleteSavedWheel}
+                disabled={!activeSavedWheelId}
+              >
+                Delete
+              </button>
+            </div>
+          </section>
+
+          {configStatus && (
+            <p className="config-status" role="status">
+              {configStatus}
+            </p>
+          )}
+        </section>
       )}
 
       {/* Wheel */}

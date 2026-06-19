@@ -8,6 +8,7 @@ test("spins, records history, and restores a saved wheel", async ({ page }) => {
   await page.getByRole("button", { name: "Close" }).click();
   await expect(page.getByText("1 spins")).toBeVisible();
 
+  await page.getByRole("button", { name: "Manage Wheels" }).click();
   await page.getByRole("textbox", { name: "Saved wheel name" }).fill(
     "Dinner Choices",
   );
@@ -17,6 +18,7 @@ test("spins, records history, and restores a saved wheel", async ({ page }) => {
   ).toHaveValue(/.+/);
 
   await page.reload();
+  await page.getByRole("button", { name: "Manage Wheels" }).click();
   await expect(
     page.getByRole("option", { name: "Dinner Choices" }),
   ).toBeAttached();
