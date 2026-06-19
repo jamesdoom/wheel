@@ -489,6 +489,88 @@ select {
   color: #dc2626;
 }
 
+.history-panel {
+  width: min(500px, 100%);
+  margin: 1rem auto 0;
+  padding: 1rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  font-family: "WheelFont3", serif;
+}
+
+.history-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.history-heading h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.history-heading span,
+.history-empty,
+.history-list span {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.history-empty {
+  margin: 0.75rem 0 0;
+}
+
+.history-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.history-stats span {
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  background: #eef2f7;
+  font-size: 0.82rem;
+}
+
+.history-list {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.history-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.history-actions button {
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.history-actions .history-clear {
+  color: #dc2626;
+}
+
 /* Reset */
 .reset-saved-wheel-button {
   font-family: "WheelFont3", serif;
@@ -557,6 +639,19 @@ select {
 .dark-theme .item-order-controls button,
 .dark-theme .item-color-input {
   border-color: #4b5563;
+}
+
+.dark-theme .history-panel,
+.dark-theme .history-actions button {
+  border-color: #475569;
+}
+
+.dark-theme .history-stats span {
+  background: #1f2937;
+}
+
+.dark-theme .history-list li {
+  border-top-color: #374151;
 }
 
 .dark-theme input,
@@ -633,6 +728,11 @@ select {
 
   .saved-wheel-actions {
     flex-wrap: wrap;
+  }
+
+  .history-list li {
+    flex-direction: column;
+    gap: 0.15rem;
   }
 
   .mute-button,

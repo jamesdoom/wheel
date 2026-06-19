@@ -10,3 +10,11 @@ export type WheelItem = {
   hidden: boolean;
   count: number;
 };
+
+export type SpinHistoryEntry = {
+  id: string;
+  itemId: string;
+  text: string;
+  mode: WheelMode;
+  spunAt: string;
+};

@@ -19,6 +19,7 @@ type WheelCanvasProps = {
   createDefaultItems: () => WheelItem[];
   isMuted: boolean;
   theme: "light" | "dark";
+  onSpinResult: (item: WheelItem) => void;
 };
 
 const CANVAS_SIZE = 460;
@@ -87,6 +88,7 @@ function WheelCanvas({
   createDefaultItems,
   isMuted,
   theme,
+  onSpinResult,
 }: WheelCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -423,6 +425,8 @@ function WheelCanvas({
             ),
           );
         }
+
+        onSpinResult(winningItem);
 
         setIsSpinning(false);
       }

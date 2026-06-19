@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { WheelItem, WheelMode } from "./types";
+import type { SpinHistoryEntry, WheelItem, WheelMode } from "./types";
 import WheelCanvas from "./components/Wheel/WheelCanvas";
 import "./App.css";
 
@@ -19,6 +19,7 @@ const MODE_STORAGE_KEY = "wheel-mode";
 const MUTED_STORAGE_KEY = "wheel-muted";
 const THEME_STORAGE_KEY = "wheel-theme";
 const SAVED_WHEELS_STORAGE_KEY = "wheel-library";
+const SPIN_HISTORY_STORAGE_KEY = "wheel-spin-history";
 
 type WheelConfig = {
   version: 1;
@@ -223,6 +224,49 @@ function parseSavedWheels(savedWheels: string | null): SavedWheel[] {
   }
 }
 
+function parseSpinHistory(savedHistory: string | null): SpinHistoryEntry[] {
+  if (!savedHistory) return [];
+
+  try {
+    const parsedHistory = JSON.parse(savedHistory);
+    if (!Array.isArray(parsedHistory)) return [];
+
+    return parsedHistory.flatMap((entry): SpinHistoryEntry[] => {
+      if (!entry || typeof entry !== "object") return [];
+      const historyEntry = entry as Partial<SpinHistoryEntry>;
+
+      if (
+        typeof historyEntry.text !== "string" ||
+        typeof historyEntry.spunAt !== "string"
+      ) {
+        return [];
+      }
+
+      const historyMode = historyEntry.mode;
+      const mode =
+        historyMode === "elimination" || historyMode === "accumulation"
+          ? historyMode
+          : "normal";
+
+      return [
+        {
+          id:
+            typeof historyEntry.id === "string"
+              ? historyEntry.id
+              : crypto.randomUUID(),
+          itemId:
+            typeof historyEntry.itemId === "string" ? historyEntry.itemId : "",
+          text: historyEntry.text,
+          mode,
+          spunAt: historyEntry.spunAt,
+        },
+      ];
+    });
+  } catch {
+    return [];
+  }
+}
+
 function App() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const [items, setItems] = useState<WheelItem[]>(() => {
@@ -259,6 +303,9 @@ function App() {
   );
   const [activeSavedWheelId, setActiveSavedWheelId] = useState("");
   const [savedWheelName, setSavedWheelName] = useState("");
+  const [spinHistory, setSpinHistory] = useState<SpinHistoryEntry[]>(() =>
+    parseSpinHistory(localStorage.getItem(SPIN_HISTORY_STORAGE_KEY)),
+  );
 
   const [isMuted, setIsMuted] = useState(() => {
     return localStorage.getItem(MUTED_STORAGE_KEY) === "true";
@@ -293,6 +340,17 @@ function App() {
   useEffect(() => {
     localStorage.setItem(SAVED_WHEELS_STORAGE_KEY, JSON.stringify(savedWheels));
   }, [savedWheels]);
+
+  useEffect(() => {
+    localStorage.setItem(SPIN_HISTORY_STORAGE_KEY, JSON.stringify(spinHistory));
+  }, [spinHistory]);
+
+  const spinTotals = Array.from(
+    spinHistory.reduce((totals, entry) => {
+      totals.set(entry.text, (totals.get(entry.text) ?? 0) + 1);
+      return totals;
+    }, new Map<string, number>()),
+  ).sort((a, b) => b[1] - a[1]);
 
   function handleAddItem() {
     const trimmedText = newItemText.trim();
@@ -546,6 +604,44 @@ function App() {
     setConfigStatus(`Deleted ${savedWheel.name}.`);
   }
 
+  function handleSpinResult(item: WheelItem) {
+    const historyEntry: SpinHistoryEntry = {
+      id: crypto.randomUUID(),
+      itemId: item.id,
+      text: item.text,
+      mode,
+      spunAt: new Date().toISOString(),
+    };
+
+    setSpinHistory((currentHistory) =>
+      [historyEntry, ...currentHistory].slice(0, 100),
+    );
+  }
+
+  function handleClearHistory() {
+    if (!window.confirm("Clear all recorded spin results?")) return;
+    setSpinHistory([]);
+  }
+
+  function handleExportHistory() {
+    if (spinHistory.length === 0) return;
+
+    const escapeCsv = (value: string) => `"${value.replaceAll('"', '""')}"`;
+    const rows = [
+      ["Winner", "Mode", "Spun At"],
+      ...spinHistory.map((entry) => [entry.text, entry.mode, entry.spunAt]),
+    ];
+    const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = downloadUrl;
+    link.download = "big-wheel-spin-history.csv";
+    link.click();
+    URL.revokeObjectURL(downloadUrl);
+  }
+
   return (
     <main className={`app ${theme === "dark" ? "dark-theme" : "light-theme"}`}>
       <header className="app-header">
@@ -669,6 +765,7 @@ function App() {
         createDefaultItems={createDefaultItems}
         isMuted={isMuted}
         theme={theme}
+        onSpinResult={handleSpinResult}
       />
 
       {/* Add Item */}
@@ -847,6 +944,43 @@ function App() {
             </button>
           </div>
         ))}
+      </section>
+
+      <section className="history-panel" aria-labelledby="history-title">
+        <div className="history-heading">
+          <h2 id="history-title">Spin History</h2>
+          <span>{spinHistory.length} spins</span>
+        </div>
+
+        {spinHistory.length === 0 ? (
+          <p className="history-empty">Spin results will appear here.</p>
+        ) : (
+          <>
+            <div className="history-stats" aria-label="Winner totals">
+              {spinTotals.map(([name, total]) => (
+                <span key={name}>
+                  {name}: <strong>{total}</strong>
+                </span>
+              ))}
+            </div>
+
+            <ol className="history-list" aria-label="Recent spin winners">
+              {spinHistory.slice(0, 8).map((entry) => (
+                <li key={entry.id}>
+                  <strong>{entry.text}</strong>
+                  <span>{new Date(entry.spunAt).toLocaleString()}</span>
+                </li>
+              ))}
+            </ol>
+
+            <div className="history-actions">
+              <button onClick={handleExportHistory}>Export CSV</button>
+              <button className="history-clear" onClick={handleClearHistory}>
+                Clear History
+              </button>
+            </div>
+          </>
+        )}
       </section>
 
       <button
