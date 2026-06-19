@@ -55,6 +55,10 @@ function normalizeWholeNumber(value: unknown) {
   return Math.floor(parsedValue);
 }
 
+function isHexColor(value: unknown): value is string {
+  return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
+}
+
 function createDefaultItems(): WheelItem[] {
   return [
     {
@@ -105,8 +109,10 @@ function createStoredItem(rawItem: unknown, index: number): WheelItem | null {
   const fallbackColor = getNextColor(index);
   const matchingColor =
     COLORS.find((colorOption) => colorOption.color === item.color) ??
-    COLORS.find((colorOption) => colorOption.className === item.colorClass) ??
-    fallbackColor;
+    COLORS.find((colorOption) => colorOption.className === item.colorClass);
+  const color = isHexColor(item.color)
+    ? item.color
+    : (matchingColor?.color ?? fallbackColor.color);
 
   return {
     id:
@@ -118,8 +124,8 @@ function createStoredItem(rawItem: unknown, index: number): WheelItem | null {
         ? item.text
         : `Item ${index + 1}`,
     weight: normalizeWholeNumber(item.weight),
-    color: matchingColor.color,
-    colorClass: matchingColor.className,
+    color,
+    colorClass: matchingColor?.className ?? "color-custom",
     hidden: Boolean(item.hidden),
     count: normalizeWholeNumber(item.count),
   };
@@ -137,7 +143,7 @@ function parseStoredItems(savedItems: string): WheelItem[] {
       .map((item, index) => createStoredItem(item, index))
       .filter((item): item is WheelItem => item !== null);
 
-    return normalizedItems.length > 0 ? normalizedItems : createDefaultItems();
+    return normalizedItems;
   } catch {
     return createDefaultItems();
   }
@@ -246,6 +252,7 @@ function App() {
   const [newItemText, setNewItemText] = useState("");
   const [addItemError, setAddItemError] = useState("");
   const [previousItemText, setPreviousItemText] = useState("");
+  const [bulkItemText, setBulkItemText] = useState("");
   const [configStatus, setConfigStatus] = useState("");
   const [savedWheels, setSavedWheels] = useState<SavedWheel[]>(() =>
     parseSavedWheels(localStorage.getItem(SAVED_WHEELS_STORAGE_KEY)),
@@ -324,6 +331,72 @@ function App() {
 
     setNewItemText("");
     setAddItemError("");
+  }
+
+  function handleBulkAddItems() {
+    const requestedNames = bulkItemText
+      .split(/\r?\n/)
+      .map((name) => name.trim())
+      .filter(Boolean);
+
+    if (requestedNames.length === 0) {
+      setAddItemError("Paste at least one item name.");
+      return;
+    }
+
+    setItems((currentItems) => {
+      const existingNames = new Set(
+        currentItems.map((item) => item.text.trim().toLowerCase()),
+      );
+      const nextItems = [...currentItems];
+
+      for (const name of requestedNames) {
+        const normalizedName = name.toLowerCase();
+        if (existingNames.has(normalizedName)) continue;
+
+        const nextColor = getLeastUsedColor(nextItems);
+        nextItems.push({
+          id: crypto.randomUUID(),
+          text: name,
+          weight: 1,
+          color: nextColor.color,
+          colorClass: nextColor.className,
+          hidden: false,
+          count: 0,
+        });
+        existingNames.add(normalizedName);
+      }
+
+      return nextItems;
+    });
+
+    setBulkItemText("");
+    setAddItemError("");
+  }
+
+  function moveItem(index: number, direction: -1 | 1) {
+    setItems((currentItems) => {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= currentItems.length) {
+        return currentItems;
+      }
+
+      const reorderedItems = [...currentItems];
+      [reorderedItems[index], reorderedItems[targetIndex]] = [
+        reorderedItems[targetIndex],
+        reorderedItems[index],
+      ];
+      return reorderedItems;
+    });
+  }
+
+  function handleClearItems() {
+    if (!window.confirm("Remove every item from the current wheel?")) return;
+
+    setItems([]);
+    setAddItemError("");
+    setActiveSavedWheelId("");
+    setSavedWheelName("");
   }
 
   function handleResetSavedWheel() {
@@ -628,9 +701,63 @@ function App() {
       <section className="item-list">
         <h2>Wheel Items</h2>
 
-        {items.map((item) => (
+        <div className="bulk-item-tools">
+          <textarea
+            value={bulkItemText}
+            rows={3}
+            placeholder="Paste one item per line"
+            aria-label="Bulk wheel item names"
+            onChange={(event) => setBulkItemText(event.target.value)}
+          />
+
+          <div className="bulk-item-actions">
+            <button onClick={handleBulkAddItems}>Add Lines</button>
+            <button className="clear-items-button" onClick={handleClearItems}>
+              Clear All
+            </button>
+          </div>
+        </div>
+
+        {items.map((item, index) => (
           <div className="item-row" key={item.id}>
-            <span className={`color-dot ${item.colorClass}`} />
+            <div className="item-order-controls">
+              <button
+                title="Move item up"
+                aria-label={`Move ${item.text} up`}
+                disabled={index === 0}
+                onClick={() => moveItem(index, -1)}
+              >
+                ↑
+              </button>
+              <button
+                title="Move item down"
+                aria-label={`Move ${item.text} down`}
+                disabled={index === items.length - 1}
+                onClick={() => moveItem(index, 1)}
+              >
+                ↓
+              </button>
+            </div>
+
+            <input
+              className="item-color-input"
+              type="color"
+              value={item.color}
+              aria-label={`Choose color for ${item.text}`}
+              onChange={(event) =>
+                setItems((currentItems) =>
+                  currentItems.map((currentItem) =>
+                    currentItem.id === item.id
+                      ? {
+                          ...currentItem,
+                          color: event.target.value,
+                          colorClass: "color-custom",
+                        }
+                      : currentItem,
+                  ),
+                )
+              }
+            />
 
             <input
               className="item-text-input"
