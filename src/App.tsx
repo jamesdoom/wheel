@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { WheelItem, WheelMode } from "./types";
 import WheelCanvas from "./components/Wheel/WheelCanvas";
 import "./App.css";
@@ -18,6 +18,12 @@ const ITEMS_STORAGE_KEY = "wheel-items";
 const MODE_STORAGE_KEY = "wheel-mode";
 const MUTED_STORAGE_KEY = "wheel-muted";
 const THEME_STORAGE_KEY = "wheel-theme";
+
+type WheelConfig = {
+  version: 1;
+  mode: WheelMode;
+  items: WheelItem[];
+};
 
 function getNextColor(index: number) {
   return COLORS[index % COLORS.length];
@@ -130,7 +136,36 @@ function parseStoredItems(savedItems: string): WheelItem[] {
   }
 }
 
+function parseWheelConfig(rawConfig: string): WheelConfig {
+  const parsedConfig = JSON.parse(rawConfig) as Partial<WheelConfig>;
+
+  if (!parsedConfig || typeof parsedConfig !== "object") {
+    throw new Error("Invalid wheel configuration.");
+  }
+
+  if (!Array.isArray(parsedConfig.items)) {
+    throw new Error("The configuration does not contain wheel items.");
+  }
+
+  const normalizedItems = parsedConfig.items
+    .map((item, index) => createStoredItem(item, index))
+    .filter((item): item is WheelItem => item !== null);
+
+  if (normalizedItems.length === 0) {
+    throw new Error("The configuration must contain at least one item.");
+  }
+
+  const importedMode = parsedConfig.mode;
+  const mode =
+    importedMode === "elimination" || importedMode === "accumulation"
+      ? importedMode
+      : "normal";
+
+  return { version: 1, mode, items: normalizedItems };
+}
+
 function App() {
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const [items, setItems] = useState<WheelItem[]>(() => {
     const savedItems = localStorage.getItem(ITEMS_STORAGE_KEY);
 
@@ -158,6 +193,7 @@ function App() {
   const [newItemText, setNewItemText] = useState("");
   const [addItemError, setAddItemError] = useState("");
   const [previousItemText, setPreviousItemText] = useState("");
+  const [configStatus, setConfigStatus] = useState("");
 
   const [isMuted, setIsMuted] = useState(() => {
     return localStorage.getItem(MUTED_STORAGE_KEY) === "true";
@@ -241,6 +277,39 @@ function App() {
     setAddItemError("");
   }
 
+  function handleExportWheel() {
+    const config: WheelConfig = { version: 1, mode, items };
+    const blob = new Blob([JSON.stringify(config, null, 2)], {
+      type: "application/json",
+    });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = downloadUrl;
+    link.download = "big-wheel-config.json";
+    link.click();
+    URL.revokeObjectURL(downloadUrl);
+    setConfigStatus("Wheel exported.");
+  }
+
+  async function handleImportWheel(file: File) {
+    try {
+      const config = parseWheelConfig(await file.text());
+      setItems(config.items);
+      setMode(config.mode);
+      setAddItemError("");
+      setConfigStatus(`Imported ${config.items.length} wheel items.`);
+    } catch (error) {
+      setConfigStatus(
+        error instanceof Error ? error.message : "Could not import that file.",
+      );
+    } finally {
+      if (importInputRef.current) {
+        importInputRef.current.value = "";
+      }
+    }
+  }
+
   return (
     <main className={`app ${theme === "dark" ? "dark-theme" : "light-theme"}`}>
       <header className="app-header">
@@ -285,6 +354,37 @@ function App() {
           {theme === "dark" ? "Light Mode" : "Dark Mode"}
         </button>
       </div>
+
+      <section className="config-actions" aria-label="Wheel configuration">
+        <button className="config-action-button" onClick={handleExportWheel}>
+          Export Wheel
+        </button>
+
+        <button
+          className="config-action-button"
+          onClick={() => importInputRef.current?.click()}
+        >
+          Import Wheel
+        </button>
+
+        <input
+          ref={importInputRef}
+          className="visually-hidden"
+          type="file"
+          accept="application/json,.json"
+          aria-label="Import wheel configuration"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void handleImportWheel(file);
+          }}
+        />
+      </section>
+
+      {configStatus && (
+        <p className="config-status" role="status">
+          {configStatus}
+        </p>
+      )}
 
       {/* Wheel */}
       <WheelCanvas
