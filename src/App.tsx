@@ -297,6 +297,7 @@ function App() {
   const [addItemError, setAddItemError] = useState("");
   const [previousItemText, setPreviousItemText] = useState("");
   const [bulkItemText, setBulkItemText] = useState("");
+  const [isBulkToolsOpen, setIsBulkToolsOpen] = useState(false);
   const [configStatus, setConfigStatus] = useState("");
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [savedWheels, setSavedWheels] = useState<SavedWheel[]>(() =>
@@ -816,27 +817,50 @@ function App() {
 
       {/* Item List */}
       <section className="item-list">
-        <h2>Wheel Items</h2>
-
-        <div className="bulk-item-tools">
-          <textarea
-            value={bulkItemText}
-            rows={3}
-            placeholder="Paste one item per line"
-            aria-label="Bulk wheel item names"
-            onChange={(event) => setBulkItemText(event.target.value)}
-          />
-
-          <div className="bulk-item-actions">
-            <button onClick={handleBulkAddItems}>Add Lines</button>
-            <button className="clear-items-button" onClick={handleClearItems}>
-              Clear All
-            </button>
+        <div className="item-list-heading">
+          <div>
+            <h2>Wheel Items</h2>
+            <span>{items.length} items</span>
           </div>
+
+          <button
+            className="bulk-tools-toggle"
+            aria-expanded={isBulkToolsOpen}
+            aria-controls="bulk-item-tools"
+            onClick={() => setIsBulkToolsOpen((isOpen) => !isOpen)}
+          >
+            {isBulkToolsOpen ? "Close Bulk Tools" : "Bulk Tools"}
+          </button>
         </div>
 
+        {isBulkToolsOpen && (
+          <div id="bulk-item-tools" className="bulk-item-tools">
+            <textarea
+              value={bulkItemText}
+              rows={3}
+              placeholder="Paste one item per line"
+              aria-label="Bulk wheel item names"
+              onChange={(event) => setBulkItemText(event.target.value)}
+            />
+
+            <div className="bulk-item-actions">
+              <button onClick={handleBulkAddItems}>Add Lines</button>
+              <button className="clear-items-button" onClick={handleClearItems}>
+                Clear All
+              </button>
+            </div>
+          </div>
+        )}
+
+        {items.length === 0 && (
+          <p className="item-list-empty">Add an item above or open Bulk Tools.</p>
+        )}
+
         {items.map((item, index) => (
-          <div className="item-row" key={item.id}>
+          <div
+            className={`item-row ${mode === "accumulation" ? "has-count" : ""}`}
+            key={item.id}
+          >
             <div className="item-order-controls">
               <button
                 title="Move item up"
@@ -844,7 +868,7 @@ function App() {
                 disabled={index === 0}
                 onClick={() => moveItem(index, -1)}
               >
-                ↑
+                {"\u2191"}
               </button>
               <button
                 title="Move item down"
@@ -852,7 +876,7 @@ function App() {
                 disabled={index === items.length - 1}
                 onClick={() => moveItem(index, 1)}
               >
-                ↓
+                {"\u2193"}
               </button>
             </div>
 
@@ -925,7 +949,7 @@ function App() {
             />
 
             <label className="weight-input-label">
-              Weight
+              <span>Weight</span>
               <input
                 className="weight-input"
                 type="number"
@@ -960,7 +984,7 @@ function App() {
                 )
               }
             >
-              ✕
+              {"\u2715"}
             </button>
           </div>
         ))}
